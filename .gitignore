@@ -1,0 +1,125 @@
+# ==============================================================================
+# NEXUS Global Monorepo Gitignore
+# Covers Node/React, Python/Django, Docker, IDEs, and Environment Secrets
+# ==============================================================================
+
+# --- System Files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDEs and Editors ---
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# --- Environment Secrets & Local Configurations (CRITICAL) ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.env
+secrets.json
+*.key
+*.pem
+
+# --- Python / Django (Backend) ---
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.hypothesis/
+.dmypy.json
+dmypy.json
+.mypy_cache/
+.pyre/
+.pytype/
+pip-log.txt
+pip-delete-this-directory.txt
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# --- Node / React (Frontend) ---
+node_modules/
+jspm_packages/
+web_packages/
+.npm
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_es/
+.rts2_cache_umd/
+.node_repl_history
+package-lock.json
+!frontend/package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+dist-ssr/
+*.local
+.parcel-cache
+.cache/
+.vite/
+.nuxt/
+.next/
+.out/
+.docusaurus/
+
+# --- Docker & Infrastructure ---
+.docker/
+docker-compose.override.yml
+*.db
+*.sqlite
+
+# --- Logs and Runtime ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+django_debug.log
+celerybeat-schedule
+celerybeat.pid

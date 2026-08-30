@@ -1,0 +1,47 @@
+# ==============================================================================
+# NEXUS Backend - Tooling Configuration
+# Ruff (lint + format), pytest / pytest-django
+# ==============================================================================
+
+[tool.ruff]
+# Keep in sync with the Python version pinned in the Dockerfile.
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    "**/migrations/**",
+    ".venv",
+]
+
+[tool.ruff.lint]
+# A pragmatic, non-noisy default rule set.
+#   E/W  - pycodestyle
+#   F    - pyflakes
+#   I    - isort (import sorting, replaces the old isort dependency)
+#   UP   - pyupgrade
+#   B    - flake8-bugbear
+#   DJ   - flake8-django
+#   C4   - flake8-comprehensions
+select = ["E", "W", "F", "I", "UP", "B", "DJ", "C4"]
+ignore = [
+    "E501",  # line length is handled by the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101"]
+"**/settings/*.py" = ["F403", "F405"]  # `from .base import *` is intentional
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ------------------------------------------------------------------------------
+# pytest / pytest-django
+# ------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.development"
+python_files = ["test_*.py", "tests.py"]
+testpaths = ["tests", "apps"]
+addopts = "-ra --strict-markers"
