@@ -1,0 +1,97 @@
+# ==============================================================================
+# NEXUS - production stack
+#
+#     client → proxy (nginx, TLS terminated upstream) → backend (Gunicorn/Django) → db
+#
+# Usage:
+#   cp .env.example .env         # then set real production values
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# No development server, no DEBUG, no Redis/Celery (unused in this milestone),
+# no secrets in this file - everything sensitive comes from .env.
+# ==============================================================================
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?set DB_NAME in .env}
+      POSTGRES_USER: ${DB_USER:?set DB_USER in .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No published port: the database is only reachable on the compose network.
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: production
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?set ALLOWED_HOSTS in .env}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-true}
+      SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
+      CONN_MAX_AGE: ${CONN_MAX_AGE:-60}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      # Optional error monitoring - inactive unless SENTRY_DSN is set.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-30}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_COLLECTSTATIC: ${RUN_COLLECTSTATIC:-true}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/').status==200 else 1)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    # No published port: only the proxy talks to Gunicorn.
+
+  proxy:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.prod.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_APP_NAME: ${VITE_APP_NAME:-NEXUS}
+        VITE_ENVIRONMENT: production
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${PROXY_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data_prod:
