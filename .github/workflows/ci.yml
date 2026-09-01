@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
 
 # Cancel superseded runs on the same ref.
@@ -42,8 +42,25 @@ jobs:
       - name: Django system checks
         run: python manage.py check
 
+      - name: Migrations are up to date
+        run: python manage.py makemigrations --check --dry-run
+
       - name: Pytest
         run: pytest
+
+      - name: Production deploy checks (safe CI env, no real secrets)
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          SECRET_KEY: ci-not-a-real-secret-${{ github.run_id }}-aZ9bY8cX7dW6eV5fU4gT3
+          ALLOWED_HOSTS: ci.nexus.example.com
+          CSRF_TRUSTED_ORIGINS: https://ci.nexus.example.com
+          DB_ENGINE: django.db.backends.postgresql
+          DB_NAME: nexus
+          DB_USER: nexus
+          DB_PASSWORD: ci-db-password
+          DB_HOST: localhost
+          DB_PORT: "5432"
+        run: python manage.py check --deploy --fail-level WARNING
 
   frontend:
     name: Frontend (ESLint / Prettier / tsc / Vitest / build)
@@ -78,3 +95,27 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  production-stack:
+    name: Production stack (image build + compose validate + smoke test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend production image
+        run: docker build -f backend/Dockerfile -t nexus-backend:ci backend
+
+      - name: Build frontend/proxy production image
+        run: docker build -f infrastructure/docker/frontend.prod.Dockerfile -t nexus-proxy:ci .
+
+      - name: Validate production compose configuration
+        env:
+          SECRET_KEY: ci-dummy-not-a-secret
+          ALLOWED_HOSTS: localhost
+          DB_NAME: nexus
+          DB_USER: nexus
+          DB_PASSWORD: ci-dummy-db-password
+        run: docker compose -f docker-compose.prod.yml config >/dev/null
+
+      - name: Production stack smoke test
+        run: bash scripts/prod-smoke-test.sh

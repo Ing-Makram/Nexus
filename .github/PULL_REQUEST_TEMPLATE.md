@@ -1,32 +1,35 @@
-# Describe Your Changes
+# Summary
 
-Please provide a clear, concise description of what this PR does, why it is necessary, and any structural/behavioral changes introduced.
+What does this PR do, and why?
 
-## Checklist Before Requesting Review
+## Changes
 
-- [ ] My code follows the core architectural guidelines defined in `GEMINI.md`.
-- [ ] I have not modified any files or directories unrelated to my assigned task.
-- [ ] I have not introduced new technologies/packages without explicit team approval.
-- [ ] I have fully typed all new structures (avoiding Python untyped or TypeScript `any` types).
-- [ ] I have written automated tests to verify the correctness of my changes.
-- [ ] I have verified that all existing and new tests pass locally.
-- [ ] I have updated any relevant documentation (under `/docs` or in the root files) if my changes alter configuration or database schemas.
-- [ ] I have verified that no sensitive credentials or keys are hardcoded.
+-
 
-## How to Verify These Changes?
+## Checklist
 
-Please describe the manual or automated steps required to verify your implementation. Include commands to run or specific endpoints/UI forms to test.
+- [ ] Follows the conventions in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+- [ ] Scoped to this change — no unrelated files touched.
+- [ ] No new dependency without justification in this description.
+- [ ] New/changed structures are fully typed (no untyped Python, no TS `any`).
+- [ ] Tests added/updated for the behaviour that changed.
+- [ ] Ran locally and all checks pass (see below).
+- [ ] Docs updated (`README.md`, `docs/`, `.env.example`) if behaviour, config or the schema changed.
+- [ ] No secrets, credentials or keys added.
+
+## Verification
 
 ```bash
-# Example: Run the backend test suite
-cd backend && pytest
-
-# Example: Run the frontend test suite
-cd frontend && npm run test
+cd backend && ruff check . && ruff format --check . && python manage.py check && pytest
+cd frontend && npm run lint && npm run format:check && npm run typecheck && npm run test:run && npm run build
 ```
 
-## Related Architectural Decisions or Issues
+## Security considerations
 
-If this relates to a specific issue or Architectural Decision Record (ADR), link it here:
+Does this touch auth, tenant scoping, permissions, logging, or production
+settings? If so, describe the impact.
+
+## Related
+
 - Fixes #
 - Relates to ADR-
