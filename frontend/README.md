@@ -1,75 +1,88 @@
-# React + TypeScript + Vite
+# NEXUS — Frontend (`/frontend`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite single-page app for the NEXUS platform. It is a thin
+presentation layer over the Django REST API (`/api/v1/…`); all business logic
+and tenant scoping live in the backend.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** + **TypeScript** (strict mode)
+- **Vite** for dev server / build
+- **ESLint** (flat config) + **Prettier**
+- **Vitest** + **React Testing Library**
+- No router and no state-management library — routing is a small
+  auth/organization gate hierarchy, state is React context per feature.
 
-## React Compiler
+## Architecture
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+Each feature module follows the same shape (see `src/customers/`, `src/orders/`,
+`src/invoices/`):
 
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── api/<feature>.ts          # typed fetch calls via AuthorizedRequest
+├── <feature>/context.ts      # React context + value type
+├── <feature>/<Feature>Provider.tsx
+├── <feature>/use<Feature>.ts # context hook
+├── components/<Feature>*.tsx  # List / Form / Manager
+└── types/<feature>.ts
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- **`auth/`** — `AuthProvider` owns the session. The access token lives in
+  memory; the refresh token in `localStorage`. `authorizedRequest` injects the
+  bearer token and transparently refreshes once on a 401. `logout` blacklists
+  the refresh token server-side.
+- **`organizations/`** — `OrganizationsProvider` holds the org list and the
+  current selection (persisted in `localStorage`). Every feature is scoped to
+  `currentOrganization`.
+- **`RequireAuth`** gates the app on a session; **`RequireOrganization`** gates
+  the feature area on having a current organization.
+- **`HomePage`** is an app shell (topbar with brand / org switcher / sign out)
+  plus a tab workspace: **Overview · Customers · Orders · Invoices · Settings**.
+  Each tab mounts its own provider tree, so opening a tab always shows current
+  data and nothing is fetched until its tab is opened.
+- **`dashboard/`** — `DashboardProvider` calls `GET /dashboard/?organization=<id>`
+  (a single backend aggregation) for the Overview tab. Figures are never derived
+  from the list providers, which apply their own filters.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Feature providers request their list scoped to the current organization
+(`?organization=<id>` and, for orders/invoices, `&status=`) and refetch when the
+selection changes. **Search** (customers, invoices) and the **status filter**
+(orders, invoices) live on the provider; search filters the already-loaded list
+client-side (no request), the status filter refetches server-side.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Shared UI: `components/StatusBadge`, `components/SearchInput`,
+`components/StatusFilter`, and `lib/format.ts` (`formatAmount` / `formatDate`,
+locale pinned to `en-US` so every teammate sees identical figures).
+
+## Commands
+
+```bash
+npm install
+npm run dev            # Vite dev server on :5173
+npm run build          # tsc -b && vite build
+npm run lint
+npm run format:check   # prettier --check .
+npm run typecheck      # tsc -b --noEmit
+npm run test:run       # vitest run
 ```
+
+`VITE_API_URL` (default `http://localhost:8000/api/v1`) points the client at the
+backend.
+
+## Production build & serving
+
+`npm run build` emits static assets to `frontend/dist/` (`index.html` +
+hashed `assets/`). There is no server-side rendering.
+
+In production these assets are built and served by the nginx **`proxy`**
+container (`infrastructure/docker/frontend.prod.Dockerfile`, multi-stage:
+Node build → nginx). That same nginx reverse-proxies `/api`, `/admin`,
+`/static` and `/health` to Gunicorn, so:
+
+- `VITE_API_URL` is baked at **build time** to `/api/v1` (same origin — no CORS,
+  no per-environment rebuild for the host name). Override via the
+  `VITE_API_URL` build arg if the API lives elsewhere.
+- SPA deep links survive a refresh: nginx `try_files … /index.html`.
+
+See [docs/runbooks/production-deployment.md](../docs/runbooks/production-deployment.md).
