@@ -26,6 +26,21 @@ def create_organization(*, name: str, user: User) -> Organization:
     return organization
 
 
+@transaction.atomic
+def delete_organization(*, organization: Organization) -> None:
+    """Delete an organization and everything scoped to it.
+
+    ``Order.customer`` and ``Invoice.customer`` are PROTECT, so Django's cascade
+    from the organization to its customers would raise ``ProtectedError``. The
+    tenant's data is cleared in dependency order first (invoices, then orders,
+    then customers); memberships cascade with the organization.
+    """
+    organization.invoices.all().delete()
+    organization.orders.all().delete()
+    organization.customers.all().delete()
+    organization.delete()
+
+
 def _require_manager(organization: Organization, actor: User) -> Membership:
     membership = membership_for(actor, organization)
     if membership is None or membership.role not in MANAGER_ROLES:

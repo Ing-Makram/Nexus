@@ -174,6 +174,37 @@ def test_owner_can_delete_organization(api, alice):
     assert not Organization.objects.filter(id=org.id).exists()
 
 
+def test_deleting_an_organization_cascades_to_its_customers_orders_and_invoices(api, alice):
+    from datetime import date
+
+    from apps.customers.models import Customer
+    from apps.invoices.models import Invoice
+    from apps.orders.models import Order
+
+    org = create_organization(name="Acme", user=alice)
+    other = create_organization(name="Kept", user=alice)
+    customer = Customer.objects.create(organization=org, name="C")
+    order = Order.objects.create(organization=org, customer=customer, total_amount="10")
+    Invoice.objects.create(
+        organization=org,
+        customer=customer,
+        order=order,
+        invoice_number="INV-1",
+        issue_date=date(2026, 1, 1),
+        total_amount="10",
+    )
+    kept_customer = Customer.objects.create(organization=other, name="Untouched")
+
+    resp = api.delete(detail_url(org.id))
+
+    assert resp.status_code == 204
+    assert not Organization.objects.filter(id=org.id).exists()
+    assert not Customer.objects.filter(organization_id=org.id).exists()
+    assert not Order.objects.filter(organization_id=org.id).exists()
+    assert not Invoice.objects.filter(organization_id=org.id).exists()
+    assert Customer.objects.filter(id=kept_customer.id).exists()
+
+
 def test_admin_cannot_delete_organization(api, alice, bob):
     org = create_organization(name="Acme", user=bob)
     add_member(org, alice, Role.ADMIN)

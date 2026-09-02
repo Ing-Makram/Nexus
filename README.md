@@ -95,7 +95,8 @@ authentication design.
   customer/order integrity, overdue visual distinction, an `overdue` management
   command, consistent money/date formatting.
 - **Organization management** — rename, member add / role change / removal, and
-  owner-only organization delete.
+  owner-only delete that also removes the organization's customers, orders and
+  invoices.
 
 **Platform**
 
@@ -176,7 +177,7 @@ ruff check . && ruff format --check .
 python manage.py check
 python manage.py check --deploy --fail-level WARNING   # production settings, safe env
 python manage.py makemigrations --check
-pytest                                                 # 384 tests
+pytest                                                 # 385 tests
 
 # Frontend
 cd frontend
@@ -189,7 +190,7 @@ docker compose -f docker-compose.prod.yml config
 ./scripts/prod-smoke-test.sh                           # build → health → endpoints → DB-down → teardown
 ```
 
-**471 automated tests** (384 backend, 87 frontend). The same checks — plus
+**472 automated tests** (385 backend, 87 frontend). The same checks — plus
 `check --deploy`, the production image builds and the smoke test — run in CI on
 every push and pull request ([.github/workflows/ci.yml](./.github/workflows/ci.yml)).
 

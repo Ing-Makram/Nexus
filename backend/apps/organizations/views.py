@@ -26,6 +26,7 @@ from apps.organizations.services import (
     add_member,
     change_member_role,
     create_organization,
+    delete_organization,
     remove_member,
 )
 
@@ -69,6 +70,9 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             name=serializer.validated_data["name"],
             user=self.request.user,
         )
+
+    def perform_destroy(self, instance: Organization) -> None:
+        delete_organization(organization=instance)
 
 
 class MembershipViewSet(viewsets.ViewSet):

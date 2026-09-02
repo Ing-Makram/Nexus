@@ -54,6 +54,9 @@ Update `name`. Allowed for `owner` or `admin`.
 
 Allowed for `owner` only.
 
-- **204** — deleted (memberships cascade).
+- **204** — deleted. `services.delete_organization` also removes the
+  organization's customers, orders and invoices in the same transaction
+  (the customer FKs are `PROTECT`, so this is done explicitly rather than by an
+  `on_delete` rule); memberships cascade.
 - **403** — caller is `admin` or `member`.
 - **404** — caller is not a member.
