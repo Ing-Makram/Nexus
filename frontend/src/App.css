@@ -457,6 +457,38 @@ h3 {
   min-width: 12rem;
 }
 
+.date-filter {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.date-filter legend {
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.date-filter label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.date-filter input {
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
 /* ================================================================== */
 /* Lists                                                              */
 /* ================================================================== */
@@ -590,6 +622,52 @@ h3 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: var(--space-4);
+}
+
+.btn--sm {
+  padding: 0.3em 0.7em;
+  font-size: 0.8rem;
+}
+
+.charts__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.charts__head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.charts__range {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.charts__range .btn[aria-pressed='true'] {
+  color: var(--brand);
+  border-color: var(--brand);
+  background: var(--info-soft);
+}
+
+.charts__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--space-4);
+}
+
+.charts__item {
+  margin: 0;
+  min-width: 0;
+}
+
+.charts__item figcaption {
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .breakdown {

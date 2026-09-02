@@ -22,7 +22,7 @@ and [006-design-patterns.md](./docs/adr/006-design-patterns.md)).
 
 | Layer             | Technology                                                                                                          |
 | :---------------- | :------------------------------------------------------------------------------------------------------------------ |
-| **Frontend**      | React 19 + TypeScript (strict) + Vite; feature-scoped context/provider architecture, no router, no UI framework     |
+| **Frontend**      | React 19 + TypeScript (strict) + Vite; feature-scoped context/provider architecture, no router, no UI framework. One runtime dependency beyond React: Recharts, lazy-loaded for the dashboard charts |
 | **Backend**       | Python 3.12 + Django 5 + Django REST Framework; `models → selectors → services → permissions → serializers → views` |
 | **Auth**          | JWT (`djangorestframework-simplejwt`) with refresh-token blacklist + server-side logout                             |
 | **Database**      | PostgreSQL 16 (SQLite for the test suite)                                                                           |
@@ -82,16 +82,20 @@ authentication design.
   · Invoices · Settings**, and an always-visible organization switcher.
 - **Overview dashboard** — customer / order / invoice counts, invoiced / paid /
   outstanding amounts, overdue count, status breakdowns and recent activity,
-  computed by a single backend aggregation endpoint.
+  computed by a single backend aggregation endpoint, plus **date-range charts**
+  (revenue invoiced vs paid; daily orders / invoices / new customers) over a
+  30- or 90-day window from a second aggregation endpoint.
 - **Customers / Orders / Invoices** CRUD with tenant isolation, role-gated
-  writes, minimal PATCH payloads and delete confirmation.
-- Server-side **status filtering** (orders, invoices) and client-side **search**
-  (customers, invoices).
+  writes, minimal PATCH payloads and delete confirmation. Deleting a customer
+  also deletes that customer's orders and invoices (one transaction).
+- Server-side **status filtering** and **date-range filtering** (orders by order
+  date, invoices by issue date), plus client-side **search** (customers,
+  invoices).
 - Invoice **auto-numbering** (unique per organization), same-organization
   customer/order integrity, overdue visual distinction, an `overdue` management
   command, consistent money/date formatting.
-- **Organization management** — rename, member add / role change / removal,
-  owner-only delete with a clean error if data still references it.
+- **Organization management** — rename, member add / role change / removal, and
+  owner-only organization delete.
 
 **Platform**
 
@@ -172,12 +176,12 @@ ruff check . && ruff format --check .
 python manage.py check
 python manage.py check --deploy --fail-level WARNING   # production settings, safe env
 python manage.py makemigrations --check
-pytest                                                 # 374 tests
+pytest                                                 # 384 tests
 
 # Frontend
 cd frontend
 npm run lint && npm run format:check && npm run typecheck
-npm run test:run                                       # 83 tests
+npm run test:run                                       # 87 tests
 npm run build
 
 # Production stack (needs Docker + Compose v2)
@@ -185,7 +189,7 @@ docker compose -f docker-compose.prod.yml config
 ./scripts/prod-smoke-test.sh                           # build → health → endpoints → DB-down → teardown
 ```
 
-**457 automated tests** (374 backend, 83 frontend). The same checks — plus
+**471 automated tests** (384 backend, 87 frontend). The same checks — plus
 `check --deploy`, the production image builds and the smoke test — run in CI on
 every push and pull request ([.github/workflows/ci.yml](./.github/workflows/ci.yml)).
 
@@ -196,7 +200,7 @@ REST endpoint contracts (method, auth, request/response, status codes):
 - [Authentication](./docs/api/auth.md) — register / login / refresh / logout / me
 - [Organizations & members](./docs/api/organizations.md)
 - [Customers](./docs/api/customers.md) · [Orders](./docs/api/orders.md) · [Invoices](./docs/api/invoices.md)
-- [Dashboard](./docs/api/dashboard.md) — aggregation endpoint
+- [Dashboard](./docs/api/dashboard.md) — aggregate figures + daily timeseries
 
 Data model: [docs/schemas/data-model.md](./docs/schemas/data-model.md).
 
@@ -214,8 +218,9 @@ Data model: [docs/schemas/data-model.md](./docs/schemas/data-model.md).
 ## 9. Roadmap
 
 **Implemented** — everything in §3 (auth, multi-tenancy, RBAC, customers /
-orders / invoices, dashboard, filtering & search, organization management,
-production runtime, observability, CI, smoke test).
+orders / invoices, dashboard with date-range charts, status & date filtering,
+search, organization management, production runtime, observability, CI, smoke
+test).
 
 **Possible future work** (not gaps — deliberate scope boundaries):
 

@@ -1,8 +1,15 @@
+import { lazy, Suspense } from 'react'
 import { useDashboard } from '../dashboard/useDashboard'
 import { daysUntil, formatAmount, formatDate } from '../lib/format'
 import { useOrganizations } from '../organizations/useOrganizations'
 import type { DashboardRecentInvoice, DashboardRecentOrder } from '../types/dashboard'
 import { StatusBadge } from './StatusBadge'
+
+// The charting library is heavy and only the overview needs it; keep it out of
+// the initial bundle (the login screen and other tabs never load it).
+const DashboardCharts = lazy(() =>
+  import('./DashboardCharts').then((m) => ({ default: m.DashboardCharts })),
+)
 
 function Stat({
   label,
@@ -160,6 +167,10 @@ export function Dashboard() {
               tone={invoices.overdue_count > 0 ? 'danger' : undefined}
             />
           </div>
+
+          <Suspense fallback={<p className="section__status">Loading charts…</p>}>
+            <DashboardCharts />
+          </Suspense>
 
           <div className="dashboard__cols">
             <Breakdown title="Orders by status" kind="order" counts={orders.by_status} />

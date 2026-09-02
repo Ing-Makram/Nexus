@@ -156,6 +156,31 @@ def test_list_can_be_filtered_by_organization_and_status(owner_a, org_a, custome
     assert len(by_org.json()) == 2
 
 
+def test_list_can_be_filtered_by_created_date_range(owner_a, org_a, customer_a):
+    from datetime import datetime
+
+    from django.utils import timezone
+
+    old = Order.objects.create(organization=org_a, customer=customer_a, total_amount="1.00")
+    new = Order.objects.create(organization=org_a, customer=customer_a, total_amount="2.00")
+    Order.objects.filter(pk=old.pk).update(created_at=timezone.make_aware(datetime(2026, 1, 10)))
+    Order.objects.filter(pk=new.pk).update(created_at=timezone.make_aware(datetime(2026, 6, 20)))
+
+    resp = client_for(owner_a).get(list_url(), {"date_from": "2026-06-01"})
+    assert [row["id"] for row in resp.json()] == [new.id]
+
+    resp = client_for(owner_a).get(list_url(), {"date_to": "2026-03-01"})
+    assert [row["id"] for row in resp.json()] == [old.id]
+
+    resp = client_for(owner_a).get(list_url(), {"date_from": "2026-01-01", "date_to": "2026-12-31"})
+    assert {row["id"] for row in resp.json()} == {old.id, new.id}
+
+    # A malformed date is ignored, not a 500.
+    resp = client_for(owner_a).get(list_url(), {"date_from": "not-a-date"})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
 def test_retrieve_own_order(owner_a, order_a):
     resp = client_for(owner_a).get(detail_url(order_a.id))
     assert resp.status_code == 200

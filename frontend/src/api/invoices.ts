@@ -1,17 +1,28 @@
 import type { AuthorizedRequest } from '../auth/context'
 import type { Invoice, InvoiceInput, InvoiceStatus } from '../types/invoice'
 
+export interface InvoiceListFilters {
+  status?: InvoiceStatus
+  /** Inclusive lower bound on `issue_date` (`YYYY-MM-DD`). */
+  dateFrom?: string
+  /** Inclusive upper bound on `issue_date` (`YYYY-MM-DD`). */
+  dateTo?: string
+}
+
 /**
- * List invoices for one organization (the backend supports `?organization=` and
- * an optional `?status=`). Tenant scoping stays server-side.
+ * List invoices for one organization. The backend supports `?organization=`
+ * plus optional `?status=`, `?date_from=` and `?date_to=`. Tenant scoping stays
+ * server-side.
  */
 export function listInvoices(
   request: AuthorizedRequest,
   organizationId: number,
-  status?: InvoiceStatus,
+  filters: InvoiceListFilters = {},
 ): Promise<Invoice[]> {
   const query = new URLSearchParams({ organization: String(organizationId) })
-  if (status) query.set('status', status)
+  if (filters.status) query.set('status', filters.status)
+  if (filters.dateFrom) query.set('date_from', filters.dateFrom)
+  if (filters.dateTo) query.set('date_to', filters.dateTo)
   return request<Invoice[]>(`/invoices/?${query.toString()}`)
 }
 

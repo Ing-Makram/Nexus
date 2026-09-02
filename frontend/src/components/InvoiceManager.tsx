@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useInvoices } from '../invoices/useInvoices'
 import { useOrganizations } from '../organizations/useOrganizations'
 import { INVOICE_STATUSES } from '../types/invoice'
+import { DateRangeFilter } from './DateRangeFilter'
 import { InvoiceForm } from './InvoiceForm'
 import { InvoiceList } from './InvoiceList'
 import { SearchInput } from './SearchInput'
@@ -9,8 +10,17 @@ import { StatusFilter } from './StatusFilter'
 
 export function InvoiceManager() {
   const { currentOrganization } = useOrganizations()
-  const { createInvoice, hasAny, statusFilter, setStatusFilter, searchQuery, setSearchQuery } =
-    useInvoices()
+  const {
+    createInvoice,
+    hasAny,
+    statusFilter,
+    setStatusFilter,
+    dateFrom,
+    dateTo,
+    setDateRange,
+    searchQuery,
+    setSearchQuery,
+  } = useInvoices()
   const [adding, setAdding] = useState(false)
 
   const role = currentOrganization?.role
@@ -29,6 +39,7 @@ export function InvoiceManager() {
 
       <div className="section__filters">
         <StatusFilter statuses={INVOICE_STATUSES} value={statusFilter} onChange={setStatusFilter} />
+        <DateRangeFilter legend="issue date" from={dateFrom} to={dateTo} onChange={setDateRange} />
         {hasAny && (
           <SearchInput
             label="Search invoices"

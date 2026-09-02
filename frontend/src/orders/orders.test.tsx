@@ -153,8 +153,12 @@ function installBackend(opts: BackendOptions) {
       }
       if (listStatus !== 200) return json(listStatus, { detail: 'boom' })
       const status = query.get('status')
+      const dateFrom = query.get('date_from')
+      const dateTo = query.get('date_to')
       let scoped = orgId ? orders.filter((o) => String(o.organization) === orgId) : orders
       if (status) scoped = scoped.filter((o) => o.status === status)
+      if (dateFrom) scoped = scoped.filter((o) => o.created_at.slice(0, 10) >= dateFrom)
+      if (dateTo) scoped = scoped.filter((o) => o.created_at.slice(0, 10) <= dateTo)
       return json(200, scoped)
     }
     if (path.endsWith('/orders/') && method === 'POST') {
@@ -543,6 +547,39 @@ test('the status filter requests the backend and clearing it removes the paramet
   const last = orderListUrls(fetchMock).at(-1) as string
   expect(last).toContain('organization=1')
   expect(last).not.toContain('status=')
+})
+
+test('the date range filter is sent to the backend and narrows the list', async () => {
+  const fetchMock = installBackend({
+    orgs: [ORG_A],
+    customers: [
+      makeCustomer({ id: 11, organization: 1, name: 'Acme Ltd' }),
+      makeCustomer({ id: 12, organization: 1, name: 'Globex' }),
+    ],
+    orders: [
+      makeOrder({ id: 101, organization: 1, customer: 11, created_at: '2026-01-05T00:00:00Z' }),
+      makeOrder({ id: 102, organization: 1, customer: 12, created_at: '2026-06-05T00:00:00Z' }),
+    ],
+  })
+  await renderApp()
+
+  const region = await ordersRegion()
+  await (await ordersList()).findByText('Acme Ltd')
+
+  fireEvent.change(region.getByLabelText('From'), { target: { value: '2026-03-01' } })
+
+  await waitFor(() =>
+    expect(orderListUrls(fetchMock).some((url) => url.includes('date_from=2026-03-01'))).toBe(true),
+  )
+  await waitFor(async () =>
+    expect((await ordersList()).queryByText('Acme Ltd')).not.toBeInTheDocument(),
+  )
+  expect((await ordersList()).getByText('Globex')).toBeInTheDocument()
+
+  const beforeClear = orderListUrls(fetchMock).length
+  fireEvent.click(region.getByRole('button', { name: /clear/i }))
+  await waitFor(() => expect(orderListUrls(fetchMock).length).toBeGreaterThan(beforeClear))
+  expect(orderListUrls(fetchMock).at(-1)).not.toContain('date_from=')
 })
 
 test('switching organization resets the status filter', async () => {

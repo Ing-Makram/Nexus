@@ -12,6 +12,10 @@ export interface InvoicesContextValue {
   /** Active server-side status filter, or `null` for "all statuses". */
   statusFilter: InvoiceStatus | null
   setStatusFilter: (status: InvoiceStatus | null) => void
+  /** Inclusive server-side bounds on `issue_date` (`YYYY-MM-DD`), or `null`. */
+  dateFrom: string | null
+  dateTo: string | null
+  setDateRange: (from: string | null, to: string | null) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   createInvoice: (input: InvoiceInput) => Promise<Invoice>

@@ -84,6 +84,7 @@ interface BackendOptions {
   listStatus?: number
   createStatus?: number
   holdCustomers?: boolean
+  deleteError?: { status: number; body: unknown }
 }
 
 function installBackend(opts: BackendOptions) {
@@ -147,6 +148,7 @@ function installBackend(opts: BackendOptions) {
     if (match && method === 'DELETE') {
       const index = customers.findIndex((c) => c.id === Number(match[1]))
       if (index === -1) return json(404, { detail: 'not found' })
+      if (opts.deleteError) return json(opts.deleteError.status, opts.deleteError.body)
       customers.splice(index, 1)
       return json(204, undefined)
     }
@@ -264,6 +266,24 @@ test('deletes a customer', async () => {
 
   await waitFor(() => expect(screen.queryByText('Acme Ltd')).not.toBeInTheDocument())
   expect(screen.getByText('Globex')).toBeInTheDocument()
+})
+
+test('a delete rejected by the backend shows the reason it gave', async () => {
+  installBackend({
+    orgs: [ORG_A],
+    customers: [customer({ id: 101, organization: 1, name: 'Acme Ltd' })],
+    deleteError: {
+      status: 403,
+      body: { detail: 'You are not a member of this organization.' },
+    },
+  })
+  await renderApp()
+
+  const row = (await screen.findByText('Acme Ltd')).closest('li') as HTMLElement
+  fireEvent.click(within(row).getByRole('button', { name: /delete/i }))
+
+  expect(await screen.findByText(/not a member of this organization/i)).toBeInTheDocument()
+  expect(screen.getByText('Acme Ltd')).toBeInTheDocument()
 })
 
 test('switching organization changes the visible customers', async () => {

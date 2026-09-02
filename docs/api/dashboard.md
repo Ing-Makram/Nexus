@@ -45,9 +45,40 @@ endpoints).
   shown — customer **name**, never emails or unrelated ids.
 - Money values are 2dp decimal strings regardless of DB backend.
 
+## GET `/api/v1/dashboard/timeseries/?organization=<id>&days=<30|90>`
+
+Daily activity for the last `days` calendar days, for date-based charts.
+
+| Case | Response |
+| :--- | :--- |
+| `organization` missing / non-numeric | `400 {"organization": "This query parameter is required."}` |
+| caller is not a member of that organization | `404 {"detail": "Not found."}` |
+| `days` present but not `30` or `90` | `400 {"days": "Must be one of [30, 90]."}` |
+| otherwise | `200` with the body below (`days` defaults to `30`) |
+
+```json
+{
+  "organization": 1,
+  "start": "2026-08-04",
+  "end": "2026-09-02",
+  "days": 30,
+  "points": [
+    { "date": "2026-08-04", "orders": 2, "invoices": 1, "customers": 0,
+      "invoiced_amount": "340.00", "paid_amount": "0.00" }
+  ]
+}
+```
+
+- `points` always has exactly `days` entries, one per calendar day from `start`
+  to `end` inclusive, ascending and zero-filled — no gaps.
+- Orders and customers are bucketed by `created_at`; invoices, `invoiced_amount`
+  and `paid_amount` by invoice `issue_date`. `invoiced_amount` excludes `void`;
+  `paid_amount` counts only `paid`.
+
 ## Tenant isolation
 
-`selectors.dashboard_stats` builds every queryset from the existing
-`customers_for_user` / `orders_for_user` / `invoices_for_user` selectors, then
-`.filter(organization=...)`. A non-member's request 404s before any aggregation
-runs; another organization's rows can never appear in the totals.
+`selectors.dashboard_stats` and `selectors.dashboard_timeseries` build every
+queryset from the existing `customers_for_user` / `orders_for_user` /
+`invoices_for_user` selectors, then `.filter(organization=...)`. A non-member's
+request 404s before any aggregation runs; another organization's rows can never
+appear in the totals.

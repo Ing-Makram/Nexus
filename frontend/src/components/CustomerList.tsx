@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ApiError, firstApiError } from '../api/client'
 import { useCustomers } from '../customers/useCustomers'
 import type { Customer } from '../types/customer'
 import { CustomerForm } from './CustomerForm'
@@ -30,15 +31,20 @@ export function CustomerList() {
   }
 
   async function handleDelete(customer: Customer) {
-    if (!window.confirm(`Delete ${customer.name}? This cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `Delete ${customer.name}? Their orders and invoices are deleted too. This cannot be undone.`,
+      )
+    ) {
       return
     }
     setRowError(null)
     setDeletingId(customer.id)
     try {
       await deleteCustomer(customer.id)
-    } catch {
-      setRowError(`Could not delete ${customer.name}. Please try again.`)
+    } catch (error) {
+      const reason = error instanceof ApiError ? firstApiError(error.data) : null
+      setRowError(reason ?? `Could not delete ${customer.name}. Please try again.`)
     } finally {
       setDeletingId(null)
     }

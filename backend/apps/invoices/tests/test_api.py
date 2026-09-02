@@ -166,6 +166,30 @@ def test_list_can_be_filtered_by_organization_and_status(owner_a, org_a, custome
     assert [row["status"] for row in status_resp.json()] == ["paid"]
 
 
+def test_list_can_be_filtered_by_issue_date_range(owner_a, org_a, customer_a):
+    def at(day):
+        return create_invoice(
+            organization=org_a,
+            actor=owner_a,
+            customer=customer_a,
+            issue_date=day,
+            total_amount=Decimal("10.00"),
+        )
+
+    jan = at("2026-01-10")
+    jun = at("2026-06-20")
+
+    resp = client_for(owner_a).get(list_url(), {"date_from": "2026-06-01"})
+    assert [row["id"] for row in resp.json()] == [jun.id]
+
+    resp = client_for(owner_a).get(list_url(), {"date_to": "2026-03-01"})
+    assert [row["id"] for row in resp.json()] == [jan.id]
+
+    resp = client_for(owner_a).get(list_url(), {"date_from": "bad", "date_to": ""})
+    assert resp.status_code == 200
+    assert {row["id"] for row in resp.json()} == {jan.id, jun.id}
+
+
 def test_retrieve_own_invoice(plain_member_a, invoice_a):
     resp = client_for(plain_member_a).get(detail_url(invoice_a.id))
     assert resp.status_code == 200

@@ -32,7 +32,9 @@ survives).
 ## GET `/api/v1/invoices/`
 
 List invoices across all the caller's organizations, newest first.
-**Query params** — `?organization=<id>`, `?status=<status>`.
+**Query params** (all optional) — `?organization=<id>`, `?status=<status>`,
+`?date_from=<YYYY-MM-DD>` / `?date_to=<YYYY-MM-DD>` (inclusive bounds on
+`issue_date`; a malformed value is ignored).
 
 ## POST `/api/v1/invoices/`
 

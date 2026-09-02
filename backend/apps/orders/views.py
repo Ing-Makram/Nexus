@@ -4,6 +4,7 @@ from django.db.models import QuerySet
 from rest_framework import viewsets
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
+from apps.common.query_params import parse_date_param
 from apps.orders.models import Order, OrderStatus
 from apps.orders.permissions import CanManageOrders, CanReadOrders
 from apps.orders.selectors import orders_for_user
@@ -43,6 +44,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         status = self.request.query_params.get("status")
         if status:
             queryset = queryset.filter(status=status)
+        date_from = parse_date_param(self.request.query_params.get("date_from"))
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        date_to = parse_date_param(self.request.query_params.get("date_to"))
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
         return queryset
 
     def perform_create(self, serializer: OrderSerializer) -> None:

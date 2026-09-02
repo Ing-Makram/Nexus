@@ -10,6 +10,10 @@ export interface OrdersContextValue {
   /** Active server-side status filter, or `null` for "all statuses". */
   statusFilter: OrderStatus | null
   setStatusFilter: (status: OrderStatus | null) => void
+  /** Inclusive server-side bounds on the order date (`YYYY-MM-DD`), or `null`. */
+  dateFrom: string | null
+  dateTo: string | null
+  setDateRange: (from: string | null, to: string | null) => void
   createOrder: (input: OrderInput) => Promise<Order>
   updateOrder: (id: number, input: OrderInput) => Promise<Order>
   deleteOrder: (id: number) => Promise<void>

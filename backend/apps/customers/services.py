@@ -40,4 +40,10 @@ def update_customer(*, customer: Customer, **fields: str) -> Customer:
 
 @transaction.atomic
 def delete_customer(*, customer: Customer) -> None:
+    # Deleting a customer also deletes their orders and invoices. The customer
+    # FKs are PROTECT at the database level (a backstop against accidental
+    # deletes from elsewhere), so the dependent rows are cleared here first,
+    # invoices before orders.
+    customer.invoices.all().delete()
+    customer.orders.all().delete()
     customer.delete()

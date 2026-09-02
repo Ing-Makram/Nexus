@@ -10,6 +10,9 @@ and tenant scoping live in the backend.
 - **Vite** for dev server / build
 - **ESLint** (flat config) + **Prettier**
 - **Vitest** + **React Testing Library**
+- **Recharts** — the only runtime dependency beyond React; used for the
+  dashboard's date-range charts and lazy-loaded so it stays out of the initial
+  bundle.
 - No router and no state-management library — routing is a small
   auth/organization gate hierarchy, state is React context per feature.
 

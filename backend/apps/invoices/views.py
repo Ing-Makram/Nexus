@@ -4,6 +4,7 @@ from django.db.models import QuerySet
 from rest_framework import viewsets
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
+from apps.common.query_params import parse_date_param
 from apps.invoices.models import Invoice, InvoiceStatus
 from apps.invoices.permissions import CanManageInvoices, CanReadInvoices
 from apps.invoices.selectors import invoices_for_user
@@ -47,6 +48,12 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         status = self.request.query_params.get("status")
         if status:
             queryset = queryset.filter(status=status)
+        date_from = parse_date_param(self.request.query_params.get("date_from"))
+        if date_from:
+            queryset = queryset.filter(issue_date__gte=date_from)
+        date_to = parse_date_param(self.request.query_params.get("date_to"))
+        if date_to:
+            queryset = queryset.filter(issue_date__lte=date_to)
         return queryset
 
     def perform_create(self, serializer: InvoiceSerializer) -> None:

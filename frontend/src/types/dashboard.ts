@@ -16,6 +16,23 @@ export interface DashboardRecentInvoice {
   due_date: string | null
 }
 
+export interface DashboardTimeseriesPoint {
+  date: string
+  orders: number
+  invoices: number
+  customers: number
+  invoiced_amount: string
+  paid_amount: string
+}
+
+export interface DashboardTimeseries {
+  organization: number
+  start: string
+  end: string
+  days: number
+  points: DashboardTimeseriesPoint[]
+}
+
 export interface DashboardStats {
   organization: number
   customers: { total: number }

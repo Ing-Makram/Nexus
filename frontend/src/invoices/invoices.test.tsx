@@ -158,8 +158,12 @@ function installBackend(opts: BackendOptions) {
       }
       if (listStatus !== 200) return json(listStatus, { detail: 'boom' })
       const statusFilter = query.get('status')
+      const dateFrom = query.get('date_from')
+      const dateTo = query.get('date_to')
       let scoped = orgId ? invoices.filter((i) => String(i.organization) === orgId) : invoices
       if (statusFilter) scoped = scoped.filter((i) => i.status === statusFilter)
+      if (dateFrom) scoped = scoped.filter((i) => i.issue_date >= dateFrom)
+      if (dateTo) scoped = scoped.filter((i) => i.issue_date <= dateTo)
       return json(200, scoped)
     }
     if (path.endsWith('/invoices/') && method === 'POST') {
@@ -595,6 +599,50 @@ test('the status filter requests the backend and clearing it removes the paramet
   const last = invoiceListUrls(fetchMock).at(-1) as string
   expect(last).toContain('organization=1')
   expect(last).not.toContain('status=')
+})
+
+test('the issue-date range filter is sent to the backend and narrows the list', async () => {
+  const fetchMock = installBackend({
+    orgs: [ORG_A],
+    customers: [{ id: 11, organization: 1, name: 'Acme Ltd' }],
+    invoices: [
+      makeInvoice({
+        id: 1,
+        organization: 1,
+        customer: 11,
+        invoice_number: 'INV-JAN',
+        issue_date: '2026-01-10',
+      }),
+      makeInvoice({
+        id: 2,
+        organization: 1,
+        customer: 11,
+        invoice_number: 'INV-JUN',
+        issue_date: '2026-06-10',
+      }),
+    ],
+  })
+  await openInvoices()
+
+  const r = await region()
+  await (await invoiceList()).findByText('INV-JAN')
+
+  fireEvent.change(r.getByLabelText('From'), { target: { value: '2026-03-01' } })
+
+  await waitFor(() =>
+    expect(invoiceListUrls(fetchMock).some((url) => url.includes('date_from=2026-03-01'))).toBe(
+      true,
+    ),
+  )
+  await waitFor(async () =>
+    expect((await invoiceList()).queryByText('INV-JAN')).not.toBeInTheDocument(),
+  )
+  expect((await invoiceList()).getByText('INV-JUN')).toBeInTheDocument()
+
+  const beforeClear = invoiceListUrls(fetchMock).length
+  fireEvent.click(r.getByRole('button', { name: /clear/i }))
+  await waitFor(() => expect(invoiceListUrls(fetchMock).length).toBeGreaterThan(beforeClear))
+  expect(invoiceListUrls(fetchMock).at(-1)).not.toContain('date_from=')
 })
 
 test('switching organization resets the status filter', async () => {

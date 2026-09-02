@@ -67,3 +67,8 @@ Partial update of `name`, `email`, `phone`, `company`, `address`.
 
 **204** on success. **404** if the customer is not in one of the caller's
 organizations.
+
+Deleting a customer also deletes that customer's **orders and invoices** in the
+same transaction (`services.delete_customer`). The database FKs are `PROTECT`, so
+this cascade is performed explicitly in the service — it is not a silent
+`on_delete` rule.

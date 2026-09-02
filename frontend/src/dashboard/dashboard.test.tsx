@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from '../App'
-import type { DashboardStats } from '../types/dashboard'
+import type { DashboardStats, DashboardTimeseries } from '../types/dashboard'
 
 const USER = {
   id: 1,
@@ -48,6 +48,21 @@ const STATS: DashboardStats = {
   ],
 }
 
+function makeTimeseries(days: 30 | 90): DashboardTimeseries {
+  const points = Array.from({ length: days }, (_, i) => {
+    const d = new Date(2026, 0, 1 + i)
+    return {
+      date: d.toISOString().slice(0, 10),
+      orders: i % 3,
+      invoices: i % 2,
+      customers: i === 5 ? 2 : 0,
+      invoiced_amount: `${i * 100}.00`,
+      paid_amount: `${i * 40}.00`,
+    }
+  })
+  return { organization: 1, start: points[0].date, end: points[days - 1].date, days, points }
+}
+
 function json(status: number, body: unknown) {
   return {
     ok: status >= 200 && status < 300,
@@ -65,6 +80,10 @@ function installBackend({
     if (path.endsWith('/auth/refresh/')) return json(200, { access: 'access-token' })
     if (path.endsWith('/auth/me/')) return json(200, USER)
     if (path.endsWith('/organizations/')) return json(200, [ORG])
+    if (path.includes('/dashboard/timeseries/')) {
+      const days = url.includes('days=90') ? 90 : 30
+      return json(200, makeTimeseries(days))
+    }
     if (path.includes('/dashboard/')) {
       return dashboardStatus === 200 ? json(200, stats) : json(dashboardStatus, { detail: 'boom' })
     }
@@ -108,6 +127,29 @@ test('the overview shows figures derived from the backend dashboard endpoint', a
   )
 })
 
+test('renders the activity charts and refetches the series when the range changes', async () => {
+  const fetchMock = installBackend()
+  render(<App />)
+
+  // <DashboardCharts> is lazy-loaded, so allow for the dynamic import.
+  const heading = await screen.findByText('Activity over time', {}, { timeout: 5000 })
+  const charts = within(heading.closest('.charts') as HTMLElement)
+  expect(charts.getByText(/revenue — invoiced vs paid/i)).toBeInTheDocument()
+  expect(charts.getByText(/orders, invoices & new customers/i)).toBeInTheDocument()
+
+  const timeseriesCalls = () =>
+    fetchMock.mock.calls.filter(([u]) => String(u).includes('/dashboard/timeseries/'))
+  await vi.waitFor(() => expect(timeseriesCalls().length).toBeGreaterThan(0))
+  expect(timeseriesCalls().every(([u]) => String(u).includes('days=30'))).toBe(true)
+
+  fireEvent.click(charts.getByRole('button', { name: '90 days' }))
+
+  await vi.waitFor(() =>
+    expect(timeseriesCalls().some(([u]) => String(u).includes('days=90'))).toBe(true),
+  )
+  expect(charts.getByRole('button', { name: '90 days' })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('shows an empty overview when the organization has no data', async () => {
   installBackend({
     stats: {
@@ -148,6 +190,10 @@ test('switching organization never shows the previous organization while the new
     if (path.endsWith('/auth/refresh/')) return json(200, { access: 'access-token' })
     if (path.endsWith('/auth/me/')) return json(200, USER)
     if (path.endsWith('/organizations/')) return json(200, [ORG, ORG_2])
+    if (path.includes('/dashboard/timeseries/')) {
+      if (orgId === '2') return new Promise<never>(() => {})
+      return json(200, makeTimeseries(30))
+    }
     if (path.includes('/dashboard/')) {
       // Org 2's request hangs forever, so if org 1's figures were still
       // showing when we assert, that would prove they leaked across the switch.

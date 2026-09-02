@@ -20,6 +20,12 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<OrdersStatus>('loading')
   const [orders, setOrders] = useState<Order[]>([])
   const [statusFilter, setStatusFilter] = useState<OrderStatus | null>(null)
+  const [dateFrom, setDateFrom] = useState<string | null>(null)
+  const [dateTo, setDateTo] = useState<string | null>(null)
+  const setDateRange = useCallback((from: string | null, to: string | null) => {
+    setDateFrom(from)
+    setDateTo(to)
+  }, [])
 
   // Switching organization clears the filter and the previous organization's
   // orders, so a render never attributes stale (wrong-tenant) rows to the
@@ -30,20 +36,27 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   if (organizationId !== filterOrg) {
     setFilterOrg(organizationId)
     setStatusFilter(null)
+    setDateFrom(null)
+    setDateTo(null)
     setOrders([])
     setStatus('loading')
   }
+
+  const filters = useMemo(
+    () => ({
+      status: statusFilter ?? undefined,
+      dateFrom: dateFrom ?? undefined,
+      dateTo: dateTo ?? undefined,
+    }),
+    [statusFilter, dateFrom, dateTo],
+  )
 
   useEffect(() => {
     if (organizationId == null) return
     let cancelled = false
     void (async () => {
       try {
-        const list = await ordersApi.listOrders(
-          authorizedRequest,
-          organizationId,
-          statusFilter ?? undefined,
-        )
+        const list = await ordersApi.listOrders(authorizedRequest, organizationId, filters)
         if (cancelled) return
         setOrders(list)
         setStatus('ready')
@@ -55,20 +68,18 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [authorizedRequest, organizationId, statusFilter])
+  }, [authorizedRequest, organizationId, filters])
 
   const reload = useCallback(async () => {
     if (organizationId == null) return
     setStatus('loading')
     try {
-      setOrders(
-        await ordersApi.listOrders(authorizedRequest, organizationId, statusFilter ?? undefined),
-      )
+      setOrders(await ordersApi.listOrders(authorizedRequest, organizationId, filters))
       setStatus('ready')
     } catch {
       setStatus('error')
     }
-  }, [authorizedRequest, organizationId, statusFilter])
+  }, [authorizedRequest, organizationId, filters])
 
   const createOrder = useCallback(
     async (input: OrderInput) => {
@@ -114,12 +125,26 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       orders,
       statusFilter,
       setStatusFilter,
+      dateFrom,
+      dateTo,
+      setDateRange,
       createOrder,
       updateOrder,
       deleteOrder,
       reload,
     }),
-    [status, orders, statusFilter, createOrder, updateOrder, deleteOrder, reload],
+    [
+      status,
+      orders,
+      statusFilter,
+      dateFrom,
+      dateTo,
+      setDateRange,
+      createOrder,
+      updateOrder,
+      deleteOrder,
+      reload,
+    ],
   )
 
   return <OrdersContext value={value}>{children}</OrdersContext>

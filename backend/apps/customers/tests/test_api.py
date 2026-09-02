@@ -268,3 +268,36 @@ def test_delete_cross_tenant_customer_is_404(api, django_user_model):
     resp = api.delete(detail_url(other.id))
     assert resp.status_code == 404
     assert Customer.objects.filter(id=other.id).exists()
+
+
+def test_delete_customer_also_deletes_its_orders_and_invoices(api, org_a):
+    from datetime import date
+
+    from apps.invoices.models import Invoice
+    from apps.orders.models import Order, OrderStatus
+
+    customer = Customer.objects.create(organization=org_a, name="Has History")
+    other = Customer.objects.create(organization=org_a, name="Untouched")
+    order = Order.objects.create(
+        organization=org_a, customer=customer, status=OrderStatus.DRAFT, total_amount="10"
+    )
+    Invoice.objects.create(
+        organization=org_a,
+        customer=customer,
+        order=order,
+        invoice_number="INV-1",
+        issue_date=date(2026, 1, 1),
+        total_amount="10",
+    )
+    kept_order = Order.objects.create(
+        organization=org_a, customer=other, status=OrderStatus.DRAFT, total_amount="5"
+    )
+
+    resp = api.delete(detail_url(customer.id))
+
+    assert resp.status_code == 204
+    assert not Customer.objects.filter(id=customer.id).exists()
+    assert not Order.objects.filter(customer=customer).exists()
+    assert not Invoice.objects.filter(customer=customer).exists()
+    # A different customer's data is left alone.
+    assert Order.objects.filter(id=kept_order.id).exists()

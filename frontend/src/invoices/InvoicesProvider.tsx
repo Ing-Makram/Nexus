@@ -19,7 +19,13 @@ export function InvoicesProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<InvoicesStatus>('loading')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | null>(null)
+  const [dateFrom, setDateFrom] = useState<string | null>(null)
+  const [dateTo, setDateTo] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const setDateRange = useCallback((from: string | null, to: string | null) => {
+    setDateFrom(from)
+    setDateTo(to)
+  }, [])
 
   // Switching organization clears the filter, search and the previous
   // organization's invoices, so a render never attributes stale (wrong-tenant)
@@ -30,21 +36,28 @@ export function InvoicesProvider({ children }: { children: ReactNode }) {
   if (organizationId !== filterOrg) {
     setFilterOrg(organizationId)
     setStatusFilter(null)
+    setDateFrom(null)
+    setDateTo(null)
     setSearchQuery('')
     setInvoices([])
     setStatus('loading')
   }
+
+  const filters = useMemo(
+    () => ({
+      status: statusFilter ?? undefined,
+      dateFrom: dateFrom ?? undefined,
+      dateTo: dateTo ?? undefined,
+    }),
+    [statusFilter, dateFrom, dateTo],
+  )
 
   useEffect(() => {
     if (organizationId == null) return
     let cancelled = false
     void (async () => {
       try {
-        const list = await invoicesApi.listInvoices(
-          authorizedRequest,
-          organizationId,
-          statusFilter ?? undefined,
-        )
+        const list = await invoicesApi.listInvoices(authorizedRequest, organizationId, filters)
         if (cancelled) return
         setInvoices(list)
         setStatus('ready')
@@ -56,24 +69,18 @@ export function InvoicesProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [authorizedRequest, organizationId, statusFilter])
+  }, [authorizedRequest, organizationId, filters])
 
   const reload = useCallback(async () => {
     if (organizationId == null) return
     setStatus('loading')
     try {
-      setInvoices(
-        await invoicesApi.listInvoices(
-          authorizedRequest,
-          organizationId,
-          statusFilter ?? undefined,
-        ),
-      )
+      setInvoices(await invoicesApi.listInvoices(authorizedRequest, organizationId, filters))
       setStatus('ready')
     } catch {
       setStatus('error')
     }
-  }, [authorizedRequest, organizationId, statusFilter])
+  }, [authorizedRequest, organizationId, filters])
 
   const createInvoice = useCallback(
     async (input: InvoiceInput) => {
@@ -128,6 +135,9 @@ export function InvoicesProvider({ children }: { children: ReactNode }) {
       hasAny: invoices.length > 0,
       statusFilter,
       setStatusFilter,
+      dateFrom,
+      dateTo,
+      setDateRange,
       searchQuery,
       setSearchQuery,
       createInvoice,
@@ -140,6 +150,9 @@ export function InvoicesProvider({ children }: { children: ReactNode }) {
       visibleInvoices,
       invoices.length,
       statusFilter,
+      dateFrom,
+      dateTo,
+      setDateRange,
       searchQuery,
       createInvoice,
       updateInvoice,
