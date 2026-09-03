@@ -251,6 +251,23 @@ def test_create_rejects_customer_from_another_organization(owner_a, org_a, custo
     assert "customer" in resp.json()
 
 
+def test_create_rejects_order_from_another_organization(
+    owner_a, org_a, customer_a, org_b, customer_b
+):
+    from apps.orders.models import Order
+
+    other_order = Order.objects.create(
+        organization=org_b, customer=customer_b, total_amount=Decimal("10.00")
+    )
+    body = create_payload(org_a, customer_a, order=other_order.id)
+
+    resp = client_for(owner_a).post(list_url(), body, format="json")
+
+    assert resp.status_code == 400
+    assert "order" in resp.json()
+    assert Invoice.objects.count() == 0
+
+
 def test_create_rejects_duplicate_number(owner_a, org_a, customer_a, invoice_a):
     resp = client_for(owner_a).post(
         list_url(),

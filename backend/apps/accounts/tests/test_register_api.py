@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -65,6 +67,29 @@ def test_register_rejects_duplicate_email(api):
     )
     assert resp.status_code == 400
     assert "email" in resp.json()
+
+
+def test_concurrent_duplicate_registration_is_a_400_not_a_500(api):
+    """The serializer's existence check can be raced; the database constraint
+    is the final authority and must still surface as a 400."""
+    User.objects.create_user(email="race@example.com", password=STRONG_PASSWORD)
+
+    # Simulate the check passing (as it would for a request that ran its
+    # validation before the first INSERT committed).
+    with patch(
+        "apps.accounts.serializers.RegisterSerializer.validate_email",
+        side_effect=lambda self, value: User.objects.normalize_email(value),
+        autospec=True,
+    ):
+        resp = api.post(
+            reverse("accounts:register"),
+            {"email": "race@example.com", "password": STRONG_PASSWORD},
+            format="json",
+        )
+
+    assert resp.status_code == 400
+    assert "email" in resp.json()
+    assert User.objects.filter(email="race@example.com").count() == 1
 
 
 def test_register_rejects_duplicate_email_case_insensitively(api):

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from django.db import IntegrityError, transaction
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -39,7 +41,14 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        try:
+            with transaction.atomic():
+                user = serializer.save()
+        except IntegrityError as exc:
+            # The email uniqueness check in the serializer can be raced by a
+            # concurrent registration; the database constraint is the final
+            # authority. Surface it as the same 400 the serializer would.
+            raise ValidationError({"email": ["A user with this email already exists."]}) from exc
         return Response(_session_payload(user), status=status.HTTP_201_CREATED)
 
 
