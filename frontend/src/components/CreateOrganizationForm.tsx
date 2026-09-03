@@ -43,7 +43,7 @@ export function CreateOrganizationForm() {
           {error}
         </p>
       )}
-      <button type="submit" disabled={submitting}>
+      <button type="submit" className="btn btn--primary" disabled={submitting}>
         {submitting ? 'Creating…' : 'Create organization'}
       </button>
     </form>

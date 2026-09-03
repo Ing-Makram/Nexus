@@ -40,7 +40,16 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   })
 
   const raw = await response.text()
-  const data: unknown = raw ? JSON.parse(raw) : null
+  let data: unknown = null
+  if (raw) {
+    try {
+      data = JSON.parse(raw)
+    } catch {
+      // A non-JSON body (e.g. a proxy/server 500 HTML page). Keep the raw text
+      // so the status is still reported as an ApiError rather than a parse throw.
+      data = raw
+    }
+  }
 
   if (!response.ok) {
     throw new ApiError(response.status, data)

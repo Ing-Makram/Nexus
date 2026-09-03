@@ -11,7 +11,7 @@ export function CustomerList() {
   const [rowError, setRowError] = useState<string | null>(null)
 
   if (status === 'loading') {
-    return <p className="customers__status">Loading customers…</p>
+    return <p className="section__status">Loading customers…</p>
   }
   if (status === 'error') {
     return (
@@ -22,7 +22,7 @@ export function CustomerList() {
   }
   if (customers.length === 0) {
     return (
-      <p className="customers__status empty">
+      <p className="section__status empty">
         {hasAny || searchQuery.trim()
           ? 'No customers match your search.'
           : 'No customers yet. Add your first one.'}
@@ -77,7 +77,7 @@ export function CustomerList() {
               <div>
                 <div className="list__title">
                   <strong>{customer.name}</strong>
-                  {customer.company && <span className="list__amount">{customer.company}</span>}
+                  {customer.company && <span className="list__sub">{customer.company}</span>}
                 </div>
                 <div className="customer-list__contact list__meta">
                   {customer.email || '—'} · {customer.phone || '—'}
@@ -86,14 +86,14 @@ export function CustomerList() {
               <div className="customer-list__actions list__actions">
                 <button
                   type="button"
-                  className="btn btn--ghost"
+                  className="btn btn--ghost btn--sm"
                   onClick={() => setEditingId(customer.id)}
                 >
                   Edit
                 </button>
                 <button
                   type="button"
-                  className="btn btn--ghost"
+                  className="btn btn--ghost btn--sm"
                   onClick={() => handleDelete(customer)}
                   disabled={deletingId === customer.id}
                 >

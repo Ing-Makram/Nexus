@@ -285,10 +285,7 @@ export function OrganizationSettings() {
   return (
     <div className="settings">
       <section className="card" aria-label="Organization details">
-        <h3>{currentOrganization.name}</h3>
-        <p className="section__status">
-          Your role: <strong>{role}</strong>
-        </p>
+        <h3>Organization</h3>
         {canManage ? (
           <RenameForm id={currentOrganization.id} name={currentOrganization.name} />
         ) : (
@@ -306,7 +303,8 @@ export function OrganizationSettings() {
         <ul className="plain-list">
           {organizations.map((org) => (
             <li key={org.id}>
-              {org.name} — {org.role}
+              <span>{org.name}</span>
+              <span className="role-pill">{org.role}</span>
             </li>
           ))}
         </ul>

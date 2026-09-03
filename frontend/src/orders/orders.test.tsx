@@ -351,6 +351,31 @@ test('creates an order for the current organization', async () => {
   )
 })
 
+test('a double-click on the create button only sends one order request', async () => {
+  const fetchMock = installBackend({
+    orgs: [ORG_A],
+    customers: [makeCustomer({ id: 11, organization: 1, name: 'Acme Ltd' })],
+    orders: [],
+  })
+  await renderApp()
+
+  const region = await ordersRegion()
+  fireEvent.click(await region.findByRole('button', { name: /add order/i }))
+  fireEvent.change(region.getByLabelText('Customer'), { target: { value: '11' } })
+  fireEvent.change(region.getByLabelText('Total amount'), { target: { value: '150.00' } })
+
+  const submit = region.getByRole('button', { name: /add order/i })
+  fireEvent.click(submit)
+  fireEvent.click(submit)
+
+  await (await ordersList()).findByText('Acme Ltd')
+  const posts = fetchMock.mock.calls.filter(
+    ([u, init]) =>
+      String(u).includes('/orders/') && (init as RequestInit | undefined)?.method === 'POST',
+  )
+  expect(posts).toHaveLength(1)
+})
+
 test('surfaces an API validation error when creating an order', async () => {
   installBackend({
     orgs: [ORG_A],

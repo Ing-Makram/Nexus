@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { ApiError, firstApiError } from '../api/client'
 import type { CustomerInput } from '../types/customer'
 
@@ -26,6 +26,9 @@ export function CustomerForm({
   const [form, setForm] = useState<FormState>({ ...BLANK, ...initial })
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Guards against a rapid double-click firing a second request before the
+  // disabled state has re-rendered.
+  const inFlight = useRef(false)
 
   function update(field: keyof FormState) {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -35,6 +38,8 @@ export function CustomerForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (inFlight.current) return
+    inFlight.current = true
     setError(null)
     setSubmitting(true)
     try {
@@ -53,6 +58,7 @@ export function CustomerForm({
         setError('Something went wrong. Please try again.')
       }
     } finally {
+      inFlight.current = false
       setSubmitting(false)
     }
   }
@@ -85,11 +91,11 @@ export function CustomerForm({
         </p>
       )}
       <div className="customer-form__actions">
-        <button type="submit" disabled={submitting}>
+        <button type="submit" className="btn btn--primary" disabled={submitting}>
           {submitting ? busyLabel : submitLabel}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} disabled={submitting}>
+          <button type="button" className="btn btn--ghost" onClick={onCancel} disabled={submitting}>
             Cancel
           </button>
         )}

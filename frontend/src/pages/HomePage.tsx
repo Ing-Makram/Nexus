@@ -90,9 +90,9 @@ function WorkspaceHeader() {
   return (
     <div className="workspace-head">
       <h1>{currentOrganization.name}</h1>
-      <p className="workspace-head__role">
-        Your role: <strong>{currentOrganization.role}</strong>
-      </p>
+      <span className="role-pill" title="Your role in this organization">
+        {currentOrganization.role}
+      </span>
     </div>
   )
 }
@@ -106,10 +106,10 @@ export function HomePage() {
       <header className="topbar">
         <span className="topbar__brand">NEXUS</span>
         {organizations.length > 0 && <OrganizationSwitcher />}
-        <span className="topbar__user">
-          Signed in as <strong>{user?.email}</strong>
+        <span className="topbar__user" title={user?.email}>
+          {user?.email}
         </span>
-        <button type="button" className="btn btn--ghost" onClick={() => void logout()}>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => void logout()}>
           Sign out
         </button>
       </header>

@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { useDashboard } from '../dashboard/useDashboard'
 import { daysUntil, formatAmount, formatDate } from '../lib/format'
-import { useOrganizations } from '../organizations/useOrganizations'
+import { INVOICE_STATUSES } from '../types/invoice'
 import type { DashboardRecentInvoice, DashboardRecentOrder } from '../types/dashboard'
+import { ORDER_STATUSES } from '../types/order'
 import { StatusBadge } from './StatusBadge'
 
 // The charting library is heavy and only the overview needs it; keep it out of
@@ -28,7 +29,22 @@ function Stat({
   )
 }
 
-function Breakdown({
+const ORDER_TONE: Record<string, string> = {
+  draft: 'neutral',
+  pending: 'info',
+  confirmed: 'info',
+  completed: 'success',
+  cancelled: 'danger',
+}
+const INVOICE_TONE: Record<string, string> = {
+  draft: 'neutral',
+  sent: 'info',
+  paid: 'success',
+  overdue: 'danger',
+  void: 'neutral',
+}
+
+function Distribution({
   title,
   kind,
   counts,
@@ -37,20 +53,36 @@ function Breakdown({
   kind: 'order' | 'invoice'
   counts: Record<string, number>
 }) {
-  const entries = Object.entries(counts).filter(([, n]) => n > 0)
+  const order = kind === 'order' ? ORDER_STATUSES : INVOICE_STATUSES
+  const tones = kind === 'order' ? ORDER_TONE : INVOICE_TONE
+  const total = Object.values(counts).reduce((sum, n) => sum + n, 0)
+  const rows = order.filter((status) => (counts[status] ?? 0) > 0)
+
   return (
     <section className="card" aria-label={title}>
       <h3>{title}</h3>
-      {entries.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="empty">None yet.</p>
       ) : (
-        <ul className="breakdown">
-          {entries.map(([statusValue, n]) => (
-            <li key={statusValue}>
-              <StatusBadge kind={kind} status={statusValue} />
-              <span>{n}</span>
-            </li>
-          ))}
+        <ul className="distribution">
+          {rows.map((status) => {
+            const n = counts[status] ?? 0
+            return (
+              <li key={status}>
+                <StatusBadge kind={kind} status={status} />
+                <span className="distribution__track" aria-hidden="true">
+                  <span
+                    className={`distribution__fill distribution__fill--${tones[status] ?? 'neutral'}`}
+                    style={{ width: `${total ? Math.max(4, (n / total) * 100) : 0}%` }}
+                  />
+                </span>
+                <span className="distribution__count">
+                  {n}
+                  <span className="visually-hidden"> of {total}</span>
+                </span>
+              </li>
+            )
+          })}
         </ul>
       )}
     </section>
@@ -67,10 +99,13 @@ function RecentOrders({ rows }: { rows: DashboardRecentOrder[] }) {
         <ul className="recent-list">
           {rows.map((order) => (
             <li key={order.id}>
-              <span className="recent-list__title">{order.customer}</span>
-              <StatusBadge kind="order" status={order.status} />
-              <span className="recent-list__meta">
-                {formatAmount(order.total_amount)} · {formatDate(order.created_at)}
+              <span className="recent-list__main">
+                <span className="recent-list__title">{order.customer}</span>
+                <StatusBadge kind="order" status={order.status} />
+              </span>
+              <span className="recent-list__figure">
+                <span className="recent-list__amount">{formatAmount(order.total_amount)}</span>
+                <span className="recent-list__meta">{formatDate(order.created_at)}</span>
               </span>
             </li>
           ))}
@@ -94,14 +129,16 @@ function RecentInvoices({ rows }: { rows: DashboardRecentInvoice[] }) {
               invoice.status !== 'paid' && invoice.status !== 'void' && due !== null && due < 0
             return (
               <li key={invoice.id}>
-                <span className="recent-list__title">{invoice.invoice_number}</span>
-                <StatusBadge kind="invoice" status={invoice.status} />
-                <span className="recent-list__meta">
-                  {invoice.customer} · {formatAmount(invoice.total_amount)}
+                <span className="recent-list__main">
+                  <span className="recent-list__title">{invoice.invoice_number}</span>
+                  <StatusBadge kind="invoice" status={invoice.status} />
+                  <span className="list__sub">{invoice.customer}</span>
+                </span>
+                <span className="recent-list__figure">
+                  <span className="recent-list__amount">{formatAmount(invoice.total_amount)}</span>
                   {invoice.due_date && (
-                    <span className={overdue ? 'text-danger' : undefined}>
-                      {' '}
-                      · due {formatDate(invoice.due_date)}
+                    <span className={`recent-list__meta${overdue ? ' text-danger' : ''}`}>
+                      due {formatDate(invoice.due_date)}
                     </span>
                   )}
                 </span>
@@ -115,7 +152,6 @@ function RecentInvoices({ rows }: { rows: DashboardRecentInvoice[] }) {
 }
 
 export function Dashboard() {
-  const { currentOrganization } = useOrganizations()
   const { status, stats, reload } = useDashboard()
 
   if (status === 'loading') {
@@ -139,8 +175,8 @@ export function Dashboard() {
   return (
     <div className="dashboard">
       <div className="section__head">
-        <h2>{currentOrganization?.name} — overview</h2>
-        <button type="button" className="btn btn--ghost" onClick={() => void reload()}>
+        <h2>Overview</h2>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => void reload()}>
           Refresh
         </button>
       </div>
@@ -173,8 +209,8 @@ export function Dashboard() {
           </Suspense>
 
           <div className="dashboard__cols">
-            <Breakdown title="Orders by status" kind="order" counts={orders.by_status} />
-            <Breakdown title="Invoices by status" kind="invoice" counts={invoices.by_status} />
+            <Distribution title="Orders by status" kind="order" counts={orders.by_status} />
+            <Distribution title="Invoices by status" kind="invoice" counts={invoices.by_status} />
           </div>
 
           <div className="dashboard__cols">

@@ -76,7 +76,8 @@ test('after signing in, the user is prompted to create their first organization'
   expect(
     await screen.findByRole('heading', { name: /create your first organization/i }),
   ).toBeInTheDocument()
-  expect(screen.getByText(/signed in as/i)).toBeInTheDocument()
+  expect(screen.getByText('user@example.com')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
   expect(localStorage.getItem('nexus.auth.refresh')).toBe('refresh-token')
 })
 

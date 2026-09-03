@@ -1,7 +1,6 @@
 /**
- * Display formatting helpers. The backend stores plain decimal strings with no
- * currency attached, so amounts are shown as grouped numbers (e.g. `1,234.50`)
- * rather than asserting a currency the organization may not use.
+ * Display formatting helpers. The backend stores plain decimal strings; amounts
+ * are shown as USD (e.g. `$1,234.50`).
  *
  * The locale is pinned so every member of an organization sees financial
  * figures and dates in exactly the same, unambiguous format.
@@ -10,6 +9,8 @@
 const LOCALE = 'en-US'
 
 const amountFormatter = new Intl.NumberFormat(LOCALE, {
+  style: 'currency',
+  currency: 'USD',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
@@ -41,7 +42,7 @@ function parseApiDate(value: string): Date {
   return new Date(value)
 }
 
-/** `"1234.5"` -> `"1,234.50"`. Non-numeric input is returned unchanged. */
+/** `"1234.5"` -> `"$1,234.50"`. Non-numeric input is returned unchanged. */
 export function formatAmount(value: string | number): string {
   const n = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(n) ? amountFormatter.format(n) : String(value)

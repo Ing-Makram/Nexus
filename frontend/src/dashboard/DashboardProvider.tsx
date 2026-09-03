@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getDashboard, getDashboardTimeseries, type DashboardRange } from '../api/dashboard'
 import { useAuth } from '../auth/useAuth'
 import { useOrganizations } from '../organizations/useOrganizations'
@@ -15,6 +15,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const { authorizedRequest } = useAuth()
   const { currentOrganization } = useOrganizations()
   const organizationId = currentOrganization?.id ?? null
+
+  // Lets an in-flight manual reload detect that the organization changed under
+  // it and drop its (now wrong-tenant) result instead of overwriting state.
+  const currentOrgRef = useRef(organizationId)
+  useEffect(() => {
+    currentOrgRef.current = organizationId
+  }, [organizationId])
 
   const [status, setStatus] = useState<DashboardStatus>('loading')
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -84,18 +91,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     if (organizationId == null) return
+    const forOrg = organizationId
     setStatus('loading')
     setTimeseriesStatus('loading')
     try {
       const [next, series] = await Promise.all([
-        getDashboard(authorizedRequest, organizationId),
-        getDashboardTimeseries(authorizedRequest, organizationId, range),
+        getDashboard(authorizedRequest, forOrg),
+        getDashboardTimeseries(authorizedRequest, forOrg, range),
       ])
+      if (currentOrgRef.current !== forOrg) return
       setStats(next)
       setStatus('ready')
       setTimeseries(series)
       setTimeseriesStatus('ready')
     } catch {
+      if (currentOrgRef.current !== forOrg) return
       setStatus('error')
       setTimeseriesStatus('error')
     }

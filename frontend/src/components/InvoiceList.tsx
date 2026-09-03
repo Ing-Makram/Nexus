@@ -30,7 +30,7 @@ export function InvoiceList({ canManage }: InvoiceListProps) {
     customers.find((customer) => customer.id === id)?.name ?? `Customer #${id}`
 
   if (status === 'loading') {
-    return <p className="invoices__status">Loading invoices…</p>
+    return <p className="section__status">Loading invoices…</p>
   }
   if (status === 'error') {
     return (
@@ -43,7 +43,7 @@ export function InvoiceList({ canManage }: InvoiceListProps) {
     let message = 'No invoices yet.'
     if (searchQuery.trim()) message = 'No invoices match your search.'
     else if (statusFilter) message = `No ${statusFilter} invoices.`
-    return <p className="invoices__status empty">{message}</p>
+    return <p className="section__status empty">{message}</p>
   }
 
   async function handleDelete(invoice: Invoice) {
@@ -98,12 +98,11 @@ export function InvoiceList({ canManage }: InvoiceListProps) {
                 <div className="list__title">
                   <strong>{invoice.invoice_number}</strong>
                   <StatusBadge kind="invoice" status={invoice.status} />
-                  <span className="list__amount">{formatAmount(invoice.total_amount)}</span>
+                  <span className="list__sub">{customerName(invoice.customer)}</span>
                 </div>
                 <div className="invoice-list__meta list__meta">
-                  {customerName(invoice.customer)}
-                  {invoice.order != null && <> · order #{invoice.order}</>} · issued{' '}
-                  {formatDate(invoice.issue_date)}
+                  issued {formatDate(invoice.issue_date)}
+                  {invoice.order != null && <> · order #{invoice.order}</>}
                   {(() => {
                     const due = dueLabel(invoice)
                     return (
@@ -116,18 +115,21 @@ export function InvoiceList({ canManage }: InvoiceListProps) {
                 </div>
                 {invoice.notes && <div className="invoice-list__notes">{invoice.notes}</div>}
               </div>
+              <div className="list__figure">
+                <span className="list__figure-amount">{formatAmount(invoice.total_amount)}</span>
+              </div>
               {canManage && (
                 <div className="invoice-list__actions list__actions">
                   <button
                     type="button"
-                    className="btn btn--ghost"
+                    className="btn btn--ghost btn--sm"
                     onClick={() => setEditingId(invoice.id)}
                   >
                     Edit
                   </button>
                   <button
                     type="button"
-                    className="btn btn--ghost"
+                    className="btn btn--ghost btn--sm"
                     onClick={() => handleDelete(invoice)}
                     disabled={deletingId === invoice.id}
                   >

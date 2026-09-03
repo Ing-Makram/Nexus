@@ -183,7 +183,7 @@ test('a user with no organizations can create their first one and it becomes cur
   fireEvent.click(screen.getByRole('button', { name: /create organization/i }))
 
   expect(await screen.findByRole('heading', { name: 'Acme Inc' })).toBeInTheDocument()
-  expect(screen.getByText(/your role:/i)).toHaveTextContent(/owner/i)
+  expect(screen.getByTitle(/your role/i)).toHaveTextContent(/owner/i)
   expect(localStorage.getItem('nexus.org.current')).toBe('1')
 })
 
@@ -206,8 +206,10 @@ test('settings lists every organization the user belongs to', async () => {
   await openSettings()
 
   const region = within(await screen.findByRole('region', { name: /your organizations/i }))
-  expect(region.getByText(/Alpha — owner/i)).toBeInTheDocument()
-  expect(region.getByText(/Beta — member/i)).toBeInTheDocument()
+  const alpha = region.getByText('Alpha').closest('li') as HTMLElement
+  expect(within(alpha).getByText('owner')).toBeInTheDocument()
+  const beta = region.getByText('Beta').closest('li') as HTMLElement
+  expect(within(beta).getByText('member')).toBeInTheDocument()
 })
 
 test('shows a validation error when the organization name is rejected', async () => {

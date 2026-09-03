@@ -9,7 +9,7 @@ export function OrganizationSwitcher() {
 
   return (
     <label className="org-switcher">
-      Organization
+      <span className="org-switcher__label">Organization</span>
       <select
         value={currentOrganization?.id ?? ''}
         onChange={(event) => selectOrganization(Number(event.target.value))}

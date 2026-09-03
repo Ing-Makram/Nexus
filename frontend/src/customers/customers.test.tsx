@@ -225,6 +225,25 @@ test('creates a customer for the selected organization', async () => {
   )
 })
 
+test('a double-click on the create button only sends one customer request', async () => {
+  const fetchMock = installBackend({ orgs: [ORG_A], customers: [] })
+  await renderApp()
+
+  fireEvent.click(await screen.findByRole('button', { name: /add customer/i }))
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Dup Co' } })
+
+  const submit = screen.getByRole('button', { name: /add customer/i })
+  fireEvent.click(submit)
+  fireEvent.click(submit)
+
+  await screen.findByText('Dup Co')
+  const posts = fetchMock.mock.calls.filter(
+    ([u, init]) =>
+      String(u).includes('/customers/') && (init as RequestInit | undefined)?.method === 'POST',
+  )
+  expect(posts).toHaveLength(1)
+})
+
 test('shows a validation error returned by the API on create', async () => {
   installBackend({ orgs: [ORG_A], customers: [], createStatus: 400 })
   await renderApp()

@@ -28,10 +28,10 @@ afterEach(() => {
   vi.resetModules()
 })
 
-test('formatAmount groups and pads to two decimals', () => {
-  expect(formatAmount('1234.5')).toBe('1,234.50')
-  expect(formatAmount('0')).toBe('0.00')
-  expect(formatAmount(99)).toBe('99.00')
+test('formatAmount formats as USD, grouped and padded to two decimals', () => {
+  expect(formatAmount('1234.5')).toBe('$1,234.50')
+  expect(formatAmount('0')).toBe('$0.00')
+  expect(formatAmount(99)).toBe('$99.00')
 })
 
 test('formatAmount returns non-numeric input unchanged', () => {

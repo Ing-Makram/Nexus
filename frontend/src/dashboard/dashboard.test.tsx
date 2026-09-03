@@ -108,15 +108,15 @@ test('the overview shows figures derived from the backend dashboard endpoint', a
   render(<App />)
 
   // The overview is the default tab.
-  expect(await screen.findByText(/acme — overview/i)).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Overview' })).toBeInTheDocument()
 
   const stat = (label: string) =>
     within(screen.getByText(label, { selector: '.stat__label' }).closest('.stat') as HTMLElement)
   expect(stat('Customers').getByText('4')).toBeInTheDocument()
   expect(stat('Orders').getByText('6')).toBeInTheDocument()
-  expect(stat('Invoiced').getByText('12,340.00')).toBeInTheDocument()
-  expect(stat('Paid').getByText('5,000.00')).toBeInTheDocument()
-  expect(stat('Outstanding').getByText('7,340.00')).toBeInTheDocument()
+  expect(stat('Invoiced').getByText('$12,340.00')).toBeInTheDocument()
+  expect(stat('Paid').getByText('$5,000.00')).toBeInTheDocument()
+  expect(stat('Outstanding').getByText('$7,340.00')).toBeInTheDocument()
 
   const recentInvoices = within(screen.getByRole('region', { name: 'Recent invoices' }))
   expect(recentInvoices.getByText('INV-0003')).toBeInTheDocument()
@@ -205,16 +205,71 @@ test('switching organization never shows the previous organization while the new
   vi.stubGlobal('fetch', fetchMock)
   render(<App />)
 
-  expect(await screen.findByText(/acme — overview/i)).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Overview' })).toBeInTheDocument()
   const stat = (label: string) =>
     within(screen.getByText(label, { selector: '.stat__label' }).closest('.stat') as HTMLElement)
-  expect(stat('Invoiced').getByText('12,340.00')).toBeInTheDocument()
+  expect(stat('Invoiced').getByText('$12,340.00')).toBeInTheDocument()
 
   fireEvent.change(screen.getByRole('combobox', { name: /organization/i }), {
     target: { value: '2' },
   })
 
   // Org 1's figures must disappear immediately - not linger until org 2 loads.
-  await waitFor(() => expect(screen.queryByText('12,340.00')).not.toBeInTheDocument())
+  await waitFor(() => expect(screen.queryByText('$12,340.00')).not.toBeInTheDocument())
   expect(await screen.findByText(/loading overview/i)).toBeInTheDocument()
+})
+
+test('a manual Refresh started for one organization cannot overwrite another after a switch', async () => {
+  const ORG_2 = { id: 2, name: 'Beedle', role: 'owner', created_at: 'x', updated_at: 'x' }
+  const STATS_2: DashboardStats = {
+    ...STATS,
+    organization: 2,
+    customers: { total: 77 },
+    invoices: { ...STATS.invoices, total_amount: '55555.00' },
+  }
+
+  let releaseRefresh = () => {}
+  let org1DashCalls = 0
+  const fetchMock = vi.fn(async (url: string) => {
+    const path = url.split('?')[0]
+    const orgId = new URLSearchParams(url.split('?')[1] ?? '').get('organization')
+    if (path.endsWith('/auth/refresh/')) return json(200, { access: 'access-token' })
+    if (path.endsWith('/auth/me/')) return json(200, USER)
+    if (path.endsWith('/organizations/')) return json(200, [ORG, ORG_2])
+    if (path.includes('/dashboard/timeseries/')) {
+      return json(200, makeTimeseries(orgId === '2' ? 30 : 30))
+    }
+    if (path.includes('/dashboard/')) {
+      if (orgId === '2') return json(200, STATS_2)
+      org1DashCalls += 1
+      if (org1DashCalls === 1) return json(200, STATS) // initial load
+      // The Refresh call: hang until the test releases it.
+      await new Promise<void>((resolve) => {
+        releaseRefresh = () => resolve()
+      })
+      return json(200, STATS)
+    }
+    return json(200, [])
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  render(<App />)
+
+  const stat = (label: string) =>
+    within(screen.getByText(label, { selector: '.stat__label' }).closest('.stat') as HTMLElement)
+  expect((await screen.findAllByText('$12,340.00')).length).toBeGreaterThan(0)
+
+  fireEvent.click(screen.getByRole('button', { name: /refresh/i }))
+  await vi.waitFor(() => expect(org1DashCalls).toBe(2))
+
+  fireEvent.change(screen.getByRole('combobox', { name: /organization/i }), {
+    target: { value: '2' },
+  })
+  await waitFor(() => expect(stat('Customers').getByText('77')).toBeInTheDocument())
+
+  // Release org 1's stale Refresh response - it must not reappear under org 2.
+  releaseRefresh()
+  await new Promise((r) => setTimeout(r, 0))
+  expect(stat('Customers').getByText('77')).toBeInTheDocument()
+  expect(stat('Invoiced').getByText('$55,555.00')).toBeInTheDocument()
+  expect(screen.queryByText('$12,340.00')).not.toBeInTheDocument()
 })

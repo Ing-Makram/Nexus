@@ -21,7 +21,7 @@ export function OrderList({ canManage }: OrderListProps) {
     customers.find((customer) => customer.id === id)?.name ?? `Customer #${id}`
 
   if (status === 'loading') {
-    return <p className="orders__status">Loading orders…</p>
+    return <p className="section__status">Loading orders…</p>
   }
   if (status === 'error') {
     return (
@@ -32,7 +32,7 @@ export function OrderList({ canManage }: OrderListProps) {
   }
   if (orders.length === 0) {
     return (
-      <p className="orders__status empty">
+      <p className="section__status empty">
         {statusFilter ? `No ${statusFilter} orders.` : 'No orders yet.'}
       </p>
     )
@@ -87,23 +87,24 @@ export function OrderList({ canManage }: OrderListProps) {
                   <strong>{customerName(order.customer)}</strong>
                   <StatusBadge kind="order" status={order.status} />
                 </div>
-                <div className="order-list__meta list__meta">
-                  {formatAmount(order.total_amount)} · {formatDate(order.created_at)}
-                </div>
                 {order.notes && <div className="order-list__notes">{order.notes}</div>}
+              </div>
+              <div className="list__figure">
+                <span className="list__figure-amount">{formatAmount(order.total_amount)}</span>
+                <span className="list__figure-date">{formatDate(order.created_at)}</span>
               </div>
               {canManage && (
                 <div className="order-list__actions list__actions">
                   <button
                     type="button"
-                    className="btn btn--ghost"
+                    className="btn btn--ghost btn--sm"
                     onClick={() => setEditingId(order.id)}
                   >
                     Edit
                   </button>
                   <button
                     type="button"
-                    className="btn btn--ghost"
+                    className="btn btn--ghost btn--sm"
                     onClick={() => handleDelete(order)}
                     disabled={deletingId === order.id}
                   >
