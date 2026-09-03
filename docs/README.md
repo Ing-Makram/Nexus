@@ -5,10 +5,11 @@ data model, and operational runbooks.
 
 ```
 docs/
-├── adr/         Architecture Decision Records (context → decision → consequences)
-├── api/         REST API contracts, one Markdown file per resource group
-├── schemas/     data model overview
-└── runbooks/    operational procedures (production deployment, troubleshooting)
+├── adr/          Architecture Decision Records (context → decision → consequences)
+├── api/          REST API contracts, one Markdown file per resource group
+├── schemas/      data model overview
+├── runbooks/     operational procedures (production deployment, troubleshooting)
+└── screenshots/  UI screenshots referenced from the root README
 ```
 
 ## Conventions
