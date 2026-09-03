@@ -127,7 +127,7 @@ layered architecture, the multi-tenancy model and the authentication design.
 
 | Area | Technology |
 | :-- | :-- |
-| **Backend** | Python 3.12, Django 5, Django REST Framework, `djangorestframework-simplejwt` |
+| **Backend** | Python 3.12, Django 5, Django REST Framework, `djangorestframework-simplejwt`, `django-cors-headers` |
 | **Database** | PostgreSQL 16 (SQLite for the test suite) |
 | **Frontend** | React 19, TypeScript (strict), Vite; Recharts (lazy-loaded) for the dashboard charts |
 | **Static files** | WhiteNoise (compressed, hashed manifest) |
@@ -161,7 +161,10 @@ Implemented controls:
   registration path also handles the concurrent duplicate-email race as a 400.
 - **Fail-fast production settings** — `config.settings.production` refuses to
   start without `SECRET_KEY` / `ALLOWED_HOSTS`; HSTS, secure cookies, SSL
-  redirect and a proxy SSL header are set.
+  redirect, a proxy SSL header, `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff` and a `same-origin` referrer policy are set —
+  Django applies them to the API, and nginx repeats them on the SPA responses it
+  serves directly.
 - **Non-root backend container** running under `tini`.
 - **No secrets in the repository** — every setting comes from an environment
   variable listed with a placeholder in `.env.example`; `.env` is gitignored.

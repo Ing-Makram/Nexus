@@ -27,6 +27,7 @@ The stack is intentionally small:
 | Backend | Python + Django + Django REST Framework |
 | Database | PostgreSQL |
 | Auth | `djangorestframework-simplejwt` |
+| CORS | `django-cors-headers` (dev cross-origin: Vite → API) |
 | Static files | WhiteNoise |
 | App server / proxy | Gunicorn + nginx |
 | Containers | Docker + Docker Compose |
