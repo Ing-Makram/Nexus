@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 
 from apps.orders.models import Order, OrderStatus
-from apps.organizations.selectors import membership_for
+from apps.organizations.selectors import require_membership
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -19,11 +19,6 @@ if TYPE_CHECKING:
 # Fields a caller may change on an existing order. ``organization`` is
 # deliberately absent: an order never moves to another organization.
 WRITABLE_FIELDS = ("customer", "status", "total_amount", "notes")
-
-
-def _require_membership(organization: Organization, actor: User) -> None:
-    if membership_for(actor, organization) is None:
-        raise PermissionDenied("You are not a member of this organization.")
 
 
 def _validate(order: Order) -> None:
@@ -45,7 +40,7 @@ def create_order(
     status: str = OrderStatus.DRAFT,
     notes: str = "",
 ) -> Order:
-    _require_membership(organization, actor)
+    require_membership(organization, actor)
 
     order = Order(
         organization=organization,
@@ -62,7 +57,7 @@ def create_order(
 
 @transaction.atomic
 def update_order(*, order: Order, actor: User, **fields: object) -> Order:
-    _require_membership(order.organization, actor)
+    require_membership(order.organization, actor)
 
     if "organization" in fields or "organization_id" in fields:
         raise ValidationError({"organization": "An order cannot be moved to another organization."})
@@ -78,5 +73,5 @@ def update_order(*, order: Order, actor: User, **fields: object) -> Order:
 
 @transaction.atomic
 def delete_order(*, order: Order, actor: User) -> None:
-    _require_membership(order.organization, actor)
+    require_membership(order.organization, actor)
     order.delete()

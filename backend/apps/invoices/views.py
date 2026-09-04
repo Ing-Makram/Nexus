@@ -4,6 +4,7 @@ from django.db.models import QuerySet
 from rest_framework import viewsets
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
+from apps.common.mixins import PermissionsByActionMixin
 from apps.common.query_params import parse_date_param
 from apps.invoices.models import Invoice, InvoiceStatus
 from apps.invoices.permissions import CanManageInvoices, CanReadInvoices
@@ -17,7 +18,7 @@ from apps.invoices.services import (
 )
 
 
-class InvoiceViewSet(viewsets.ModelViewSet):
+class InvoiceViewSet(PermissionsByActionMixin, viewsets.ModelViewSet):
     """CRUD for invoices, strictly scoped to the caller's organizations.
 
     Tenant isolation: ``get_queryset`` only returns invoices from organizations
@@ -35,10 +36,6 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         "partial_update": [IsAuthenticated, CanManageInvoices],
         "destroy": [IsAuthenticated, CanManageInvoices],
     }
-
-    def get_permissions(self) -> list[BasePermission]:
-        classes = self._permissions_by_action.get(self.action, [IsAuthenticated])
-        return [cls() for cls in classes]
 
     def get_queryset(self) -> QuerySet[Invoice]:
         queryset = invoices_for_user(self.request.user)

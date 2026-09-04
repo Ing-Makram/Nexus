@@ -7,6 +7,7 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from apps.common.mixins import PermissionsByActionMixin
 from apps.organizations.models import Membership, Organization
 from apps.organizations.permissions import (
     CanManageOrganizationMembers,
@@ -31,7 +32,7 @@ from apps.organizations.services import (
 )
 
 
-class OrganizationViewSet(viewsets.ModelViewSet):
+class OrganizationViewSet(PermissionsByActionMixin, viewsets.ModelViewSet):
     """CRUD for organizations, strictly scoped to the requesting user.
 
     Tenant isolation is enforced twice:
@@ -48,10 +49,6 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         "partial_update": [IsAuthenticated, IsOrganizationAdmin],
         "destroy": [IsAuthenticated, IsOrganizationOwner],
     }
-
-    def get_permissions(self) -> list[BasePermission]:
-        classes = self._permissions_by_action.get(self.action, [IsAuthenticated])
-        return [cls() for cls in classes]
 
     def get_queryset(self) -> QuerySet[Organization]:
         user = self.request.user

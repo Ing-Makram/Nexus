@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from django.db import transaction
-from rest_framework.exceptions import PermissionDenied
 
 from apps.customers.models import Customer
-from apps.organizations.selectors import membership_for
+from apps.organizations.selectors import require_membership
 
 if TYPE_CHECKING:
     from apps.accounts.models import User
@@ -16,14 +15,9 @@ if TYPE_CHECKING:
 WRITABLE_FIELDS = ("name", "email", "phone", "company", "address")
 
 
-def _require_membership(organization: Organization, actor: User) -> None:
-    if membership_for(actor, organization) is None:
-        raise PermissionDenied("You are not a member of this organization.")
-
-
 @transaction.atomic
 def create_customer(*, organization: Organization, actor: User, **fields: str) -> Customer:
-    _require_membership(organization, actor)
+    require_membership(organization, actor)
     data = {key: fields.get(key, "") for key in WRITABLE_FIELDS}
     data["name"] = fields["name"]
     return Customer.objects.create(organization=organization, created_by=actor, **data)

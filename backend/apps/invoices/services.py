@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 
 from apps.invoices.models import Invoice, InvoiceStatus
 from apps.organizations.models import Organization
-from apps.organizations.selectors import membership_for
+from apps.organizations.selectors import require_membership
 
 if TYPE_CHECKING:
     from datetime import date
@@ -32,11 +32,6 @@ WRITABLE_FIELDS = (
     "total_amount",
     "notes",
 )
-
-
-def _require_membership(organization: Organization, actor: User) -> None:
-    if membership_for(actor, organization) is None:
-        raise PermissionDenied("You are not a member of this organization.")
 
 
 def _next_invoice_number(organization: Organization) -> str:
@@ -80,7 +75,7 @@ def create_invoice(
     due_date: date | None = None,
     notes: str = "",
 ) -> Invoice:
-    _require_membership(organization, actor)
+    require_membership(organization, actor)
 
     number = invoice_number.strip()
     if not number:
@@ -107,7 +102,7 @@ def create_invoice(
 
 @transaction.atomic
 def update_invoice(*, invoice: Invoice, actor: User, **fields: object) -> Invoice:
-    _require_membership(invoice.organization, actor)
+    require_membership(invoice.organization, actor)
 
     if "organization" in fields or "organization_id" in fields:
         raise ValidationError(
@@ -125,5 +120,5 @@ def update_invoice(*, invoice: Invoice, actor: User, **fields: object) -> Invoic
 
 @transaction.atomic
 def delete_invoice(*, invoice: Invoice, actor: User) -> None:
-    _require_membership(invoice.organization, actor)
+    require_membership(invoice.organization, actor)
     invoice.delete()

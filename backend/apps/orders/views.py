@@ -4,6 +4,7 @@ from django.db.models import QuerySet
 from rest_framework import viewsets
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
+from apps.common.mixins import PermissionsByActionMixin
 from apps.common.query_params import parse_date_param
 from apps.orders.models import Order, OrderStatus
 from apps.orders.permissions import CanManageOrders, CanReadOrders
@@ -12,7 +13,7 @@ from apps.orders.serializers import OrderSerializer
 from apps.orders.services import WRITABLE_FIELDS, create_order, delete_order, update_order
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(PermissionsByActionMixin, viewsets.ModelViewSet):
     """CRUD for orders, strictly scoped to the caller's organizations.
 
     Tenant isolation: ``get_queryset`` only ever returns orders from
@@ -31,10 +32,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         "partial_update": [IsAuthenticated, CanManageOrders],
         "destroy": [IsAuthenticated, CanManageOrders],
     }
-
-    def get_permissions(self) -> list[BasePermission]:
-        classes = self._permissions_by_action.get(self.action, [IsAuthenticated])
-        return [cls() for cls in classes]
 
     def get_queryset(self) -> QuerySet[Order]:
         queryset = orders_for_user(self.request.user)
