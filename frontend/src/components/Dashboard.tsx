@@ -4,6 +4,7 @@ import { daysUntil, formatAmount, formatDate } from '../lib/format'
 import { INVOICE_STATUSES } from '../types/invoice'
 import type { DashboardRecentInvoice, DashboardRecentOrder } from '../types/dashboard'
 import { ORDER_STATUSES } from '../types/order'
+import { SkeletonStats } from './Skeleton'
 import { StatusBadge } from './StatusBadge'
 
 // The charting library is heavy and only the overview needs it; keep it out of
@@ -155,7 +156,11 @@ export function Dashboard() {
   const { status, stats, reload } = useDashboard()
 
   if (status === 'loading') {
-    return <p className="section__status">Loading overview…</p>
+    return (
+      <div className="dashboard">
+        <SkeletonStats label="Loading overview…" />
+      </div>
+    )
   }
   if (status === 'error' || !stats) {
     return (

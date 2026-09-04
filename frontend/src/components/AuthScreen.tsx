@@ -22,7 +22,7 @@ export function AuthScreen() {
       <div className="auth-screen__content">
         <div className="auth-brand">
           <h1>NEXUS</h1>
-          <p>Multi-tenant business operations</p>
+          <p>Customers, orders, invoices and business metrics — one place per organization.</p>
         </div>
 
         {mode === 'login' ? (

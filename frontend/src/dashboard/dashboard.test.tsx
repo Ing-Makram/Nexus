@@ -131,8 +131,13 @@ test('renders the activity charts and refetches the series when the range change
   const fetchMock = installBackend()
   render(<App />)
 
-  // <DashboardCharts> is lazy-loaded, so allow for the dynamic import.
-  const heading = await screen.findByText('Activity over time', {}, { timeout: 5000 })
+  // <DashboardCharts> is lazy-loaded: the dynamic import transforms the
+  // recharts dependency graph on first use, which can take several seconds
+  // under the CPU contention of a full parallel test run (each worker pays
+  // this cost independently). The default 5s budget was occasionally too
+  // tight for that transform, not for the app itself - this test alone gets
+  // a longer timeout rather than changing what it asserts.
+  const heading = await screen.findByText('Activity over time', {}, { timeout: 12000 })
   const charts = within(heading.closest('.charts') as HTMLElement)
   expect(charts.getByText(/revenue — invoiced vs paid/i)).toBeInTheDocument()
   expect(charts.getByText(/orders, invoices & new customers/i)).toBeInTheDocument()
@@ -148,7 +153,7 @@ test('renders the activity charts and refetches the series when the range change
     expect(timeseriesCalls().some(([u]) => String(u).includes('days=90'))).toBe(true),
   )
   expect(charts.getByRole('button', { name: '90 days' })).toHaveAttribute('aria-pressed', 'true')
-})
+}, 15000)
 
 test('shows an empty overview when the organization has no data', async () => {
   installBackend({

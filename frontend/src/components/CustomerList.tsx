@@ -3,6 +3,7 @@ import { ApiError, firstApiError } from '../api/client'
 import { useCustomers } from '../customers/useCustomers'
 import type { Customer } from '../types/customer'
 import { CustomerForm } from './CustomerForm'
+import { SkeletonRows } from './Skeleton'
 
 export function CustomerList() {
   const { status, customers, hasAny, searchQuery, updateCustomer, deleteCustomer } = useCustomers()
@@ -11,7 +12,7 @@ export function CustomerList() {
   const [rowError, setRowError] = useState<string | null>(null)
 
   if (status === 'loading') {
-    return <p className="section__status">Loading customers…</p>
+    return <SkeletonRows label="Loading customers…" />
   }
   if (status === 'error') {
     return (

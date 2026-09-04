@@ -4,6 +4,7 @@ import { formatAmount, formatDate } from '../lib/format'
 import { useOrders } from '../orders/useOrders'
 import type { Order } from '../types/order'
 import { OrderForm } from './OrderForm'
+import { SkeletonRows } from './Skeleton'
 import { StatusBadge } from './StatusBadge'
 
 interface OrderListProps {
@@ -21,7 +22,7 @@ export function OrderList({ canManage }: OrderListProps) {
     customers.find((customer) => customer.id === id)?.name ?? `Customer #${id}`
 
   if (status === 'loading') {
-    return <p className="section__status">Loading orders…</p>
+    return <SkeletonRows label="Loading orders…" />
   }
   if (status === 'error') {
     return (

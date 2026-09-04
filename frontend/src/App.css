@@ -63,7 +63,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-screen__bg span {
+  .auth-screen__bg span,
+  .skeleton,
+  .list__row,
+  .customer-list__row,
+  .order-list__row,
+  .invoice-list__row,
+  .member-list__row,
+  .customer-form,
+  .order-form,
+  .invoice-form {
     animation: none;
   }
 }
@@ -83,6 +92,7 @@
 
 .auth-brand h1 {
   margin: 0;
+  color: inherit;
   font-size: 1.75rem;
   font-weight: 600;
   letter-spacing: 0.32em;
@@ -643,6 +653,14 @@ h3 {
   transition:
     border-color 0.12s ease,
     background 0.12s ease;
+  animation: row-in 0.16s ease both;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
 }
 
 .list__row:hover,
@@ -1032,6 +1050,69 @@ h3 {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+}
+
+/* The Add/Edit form slides in rather than appearing abruptly. */
+.customer-form,
+.order-form,
+.invoice-form {
+  animation: form-in 0.16s ease both;
+}
+
+@keyframes form-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ================================================================== */
+/* Skeleton loaders                                                   */
+/* ================================================================== */
+
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunken) 25%,
+    var(--surface-2) 37%,
+    var(--surface-sunken) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .stacked-form label,

@@ -4,6 +4,7 @@ import { useInvoices } from '../invoices/useInvoices'
 import { daysUntil, formatAmount, formatDate } from '../lib/format'
 import type { Invoice } from '../types/invoice'
 import { InvoiceForm } from './InvoiceForm'
+import { SkeletonRows } from './Skeleton'
 import { StatusBadge } from './StatusBadge'
 
 interface InvoiceListProps {
@@ -30,7 +31,7 @@ export function InvoiceList({ canManage }: InvoiceListProps) {
     customers.find((customer) => customer.id === id)?.name ?? `Customer #${id}`
 
   if (status === 'loading') {
-    return <p className="section__status">Loading invoices…</p>
+    return <SkeletonRows label="Loading invoices…" />
   }
   if (status === 'error') {
     return (
